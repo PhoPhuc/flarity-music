@@ -5,7 +5,7 @@ import { TrackList } from './TrackList';
 import { convertFileSrc } from '../../utils/tauriBridge';
 
 export const AlbumDetail: React.FC = () => {
-  const { selectedAlbum, setSelectedAlbum, setViewMode, playTrack, openBatchLyricsForAlbum } = usePlayer();
+  const { selectedAlbum, goBack, playTrack, openBatchLyricsForAlbum } = usePlayer();
 
   const totalDurationSecs = useMemo(() => {
     if (!selectedAlbum) return 0;
@@ -33,11 +33,11 @@ export const AlbumDetail: React.FC = () => {
     <div className="p-8 space-y-8 animate-in fade-in duration-300">
       {/* Back Button */}
       <button 
-        onClick={() => { setSelectedAlbum(null); setViewMode('library-albums'); }}
-        className="flex items-center gap-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors group"
+        onClick={goBack}
+        className="flex items-center gap-2 text-xs font-bold text-neutral-400 hover:text-white transition-colors group cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span>Quay lại Thư viện Album</span>
+        <span>Quay lại</span>
       </button>
 
       {/* Album Header Banner */}

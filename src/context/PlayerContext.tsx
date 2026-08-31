@@ -85,6 +85,19 @@ interface PlayerContextType {
   openBatchLyricsForAlbum: (album: Album) => void;
   closeBatchLyrics: () => void;
 
+  // Navigation & Reload System
+  canGoBack: boolean;
+  canGoForward: boolean;
+  goBack: () => void;
+  goForward: () => void;
+  navigateTo: (entry: {
+    viewMode: ViewMode;
+    selectedAlbum?: Album | null;
+    selectedArtist?: string | null;
+    selectedPlaylist?: Playlist | null;
+  }) => void;
+  isReloading: boolean;
+
   // Actions
   selectFolderAndScan: () => Promise<void>;
   playTrack: (track: Track, trackList?: Track[]) => void;
@@ -185,10 +198,32 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off');
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [currentLyricIndex, setCurrentLyricIndex] = useState<number>(-1);
-  const [viewMode, setViewMode] = useState<ViewMode>('library-albums');
-  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
-  const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [viewMode, setViewModeState] = useState<ViewMode>('home');
+  const [selectedAlbum, setSelectedAlbumState] = useState<Album | null>(null);
+  const [selectedArtist, setSelectedArtistState] = useState<string | null>(null);
+  const [selectedPlaylist, setSelectedPlaylistState] = useState<Playlist | null>(null);
+
+  // Navigation History Stack
+  const [history, setHistory] = useState<Array<{
+    viewMode: ViewMode;
+    selectedAlbum: Album | null;
+    selectedArtist: string | null;
+    selectedPlaylist: Playlist | null;
+  }>>([
+    { viewMode: 'home', selectedAlbum: null, selectedArtist: null, selectedPlaylist: null }
+  ]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const historyIndexRef = useRef<number>(0);
+  const historyRef = useRef<Array<{
+    viewMode: ViewMode;
+    selectedAlbum: Album | null;
+    selectedArtist: string | null;
+    selectedPlaylist: Playlist | null;
+  }>>([
+    { viewMode: 'home', selectedAlbum: null, selectedArtist: null, selectedPlaylist: null }
+  ]);
+  const [isReloading, setIsReloading] = useState<boolean>(false);
+
   const [queue, setQueue] = useState<Track[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState<boolean>(true);
@@ -397,17 +432,153 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearTimeout(timer);
   }, []);
 
+  // ===================== NAVIGATION HISTORY ENGINE =====================
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < history.length - 1;
+
+  const navigateTo = useCallback((entry: {
+    viewMode: ViewMode;
+    selectedAlbum?: Album | null;
+    selectedArtist?: string | null;
+    selectedPlaylist?: Playlist | null;
+  }) => {
+    const newEntry = {
+      viewMode: entry.viewMode,
+      selectedAlbum: entry.selectedAlbum ?? null,
+      selectedArtist: entry.selectedArtist ?? null,
+      selectedPlaylist: entry.selectedPlaylist ?? null,
+    };
+
+    const curIdx = historyIndexRef.current;
+    const curHistory = historyRef.current;
+    const current = curHistory[curIdx];
+
+    const isSame = current &&
+      current.viewMode === newEntry.viewMode &&
+      current.selectedAlbum?.id === newEntry.selectedAlbum?.id &&
+      current.selectedArtist === newEntry.selectedArtist &&
+      current.selectedPlaylist?.id === newEntry.selectedPlaylist?.id;
+
+    if (!isSame) {
+      const updated = [...curHistory.slice(0, curIdx + 1), newEntry];
+      if (updated.length > 50) {
+        updated.shift();
+      }
+      const newIdx = updated.length - 1;
+      historyRef.current = updated;
+      historyIndexRef.current = newIdx;
+      setHistory(updated);
+      setHistoryIndex(newIdx);
+    }
+
+    setViewModeState(newEntry.viewMode);
+    setSelectedAlbumState(newEntry.selectedAlbum);
+    setSelectedArtistState(newEntry.selectedArtist);
+    setSelectedPlaylistState(newEntry.selectedPlaylist);
+  }, []);
+
+  const goBack = useCallback(() => {
+    const curIdx = historyIndexRef.current;
+    const curHistory = historyRef.current;
+    if (curIdx > 0) {
+      const newIdx = curIdx - 1;
+      const target = curHistory[newIdx];
+      if (target) {
+        historyIndexRef.current = newIdx;
+        setHistoryIndex(newIdx);
+        setViewModeState(target.viewMode);
+        setSelectedAlbumState(target.selectedAlbum ?? null);
+        setSelectedArtistState(target.selectedArtist ?? null);
+        setSelectedPlaylistState(target.selectedPlaylist ?? null);
+      }
+    }
+  }, []);
+
+  const goForward = useCallback(() => {
+    const curIdx = historyIndexRef.current;
+    const curHistory = historyRef.current;
+    if (curIdx < curHistory.length - 1) {
+      const newIdx = curIdx + 1;
+      const target = curHistory[newIdx];
+      if (target) {
+        historyIndexRef.current = newIdx;
+        setHistoryIndex(newIdx);
+        setViewModeState(target.viewMode);
+        setSelectedAlbumState(target.selectedAlbum ?? null);
+        setSelectedArtistState(target.selectedArtist ?? null);
+        setSelectedPlaylistState(target.selectedPlaylist ?? null);
+      }
+    }
+  }, []);
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    navigateTo({
+      viewMode: mode,
+      selectedAlbum: mode === 'album-detail' ? selectedAlbum : null,
+      selectedArtist: mode === 'artist-detail' ? selectedArtist : null,
+      selectedPlaylist: mode === 'playlist-detail' ? selectedPlaylist : null,
+    });
+  }, [navigateTo, selectedAlbum, selectedArtist, selectedPlaylist]);
+
+  const setSelectedAlbum = useCallback((album: Album | null) => {
+    if (album) {
+      navigateTo({
+        viewMode: 'album-detail',
+        selectedAlbum: album,
+        selectedArtist: null,
+        selectedPlaylist: null,
+      });
+    } else {
+      setSelectedAlbumState(null);
+    }
+  }, [navigateTo]);
+
+  const setSelectedArtist = useCallback((artist: string | null) => {
+    if (artist) {
+      navigateTo({
+        viewMode: 'artist-detail',
+        selectedAlbum: null,
+        selectedArtist: artist,
+        selectedPlaylist: null,
+      });
+    } else {
+      setSelectedArtistState(null);
+    }
+  }, [navigateTo]);
+
+  const setSelectedPlaylist = useCallback((playlist: Playlist | null) => {
+    if (playlist) {
+      navigateTo({
+        viewMode: 'playlist-detail',
+        selectedAlbum: null,
+        selectedArtist: null,
+        selectedPlaylist: playlist,
+      });
+    } else {
+      setSelectedPlaylistState(null);
+    }
+  }, [navigateTo]);
+
   const refreshLibrary = useCallback(async () => {
+    setIsReloading(true);
     try {
       const res = await tauriAPI.getSavedTracks();
       if (res && res.length > 0) {
         setTracks(res);
       }
-      invalidateTracks();
+      const plRes = await tauriAPI.getPlaylists();
+      if (plRes && plRes.length > 0) {
+        setPlaylists(plRes);
+      }
+      invalidateAll();
     } catch (e) {
       console.warn('[PlayerContext] refreshLibrary failed:', e);
+    } finally {
+      setTimeout(() => {
+        setIsReloading(false);
+      }, 500);
     }
-  }, [invalidateTracks]);
+  }, [invalidateAll]);
 
   // Lắng nghe sự kiện tải nhạc hoàn tất từ Backend Rust để cập nhật danh sách bài hát ngay tức thì
   useEffect(() => {
@@ -515,21 +686,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!window.electronAPI) return;
     const updatedPlaylists = await window.electronAPI.deletePlaylist(playlistId);
     setPlaylists(updatedPlaylists);
-    setSelectedPlaylist(prev => {
+    setSelectedPlaylistState(prev => {
       if (prev?.id === playlistId) {
         setViewMode('library-tracks');
         return null;
       }
       return prev;
     });
-  }, []);
+  }, [setViewMode]);
 
   const renamePlaylist = useCallback(async (playlistId: string, newName: string) => {
     if (!window.electronAPI) return;
     const updatedPlaylists = await window.electronAPI.renamePlaylist(playlistId, newName);
     setPlaylists(updatedPlaylists);
     // Cập nhật selectedPlaylist nếu đang xem playlist đó
-    setSelectedPlaylist(prev => {
+    setSelectedPlaylistState(prev => {
       if (prev?.id === playlistId) return { ...prev, name: newName };
       return prev;
     });
@@ -551,7 +722,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setUpdatedTrackIds(prev => new Set([...prev, ...sourceTrackIds]));
 
     // Cập nhật selectedAlbum nếu đang mở album nguồn hoặc album đích
-    setSelectedAlbum(prev => {
+    setSelectedAlbumState(prev => {
       if (!prev) return null;
       if (prev.id === sourceAlbum.id) {
         setViewMode('library-albums');
@@ -566,7 +737,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return prev;
     });
-  }, []);
+  }, [setViewMode]);
 
   // QUEUE ACTIONS
   const playNext = useCallback((track: Track) => {
@@ -604,14 +775,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setTracks(freshTracks);
     const trackIds = new Set(album.tracks.map(t => t.id));
     setQueue(prev => prev.filter(t => !trackIds.has(t.id)));
-    setSelectedAlbum(prev => {
+    setSelectedAlbumState(prev => {
       if (prev?.id === album.id) {
         setViewMode('library-albums');
         return null;
       }
       return prev;
     });
-  }, []);
+  }, [setViewMode]);
 
   const updateTrackMetadata = useCallback(async (trackId: string, updates: any) => {
     if (!window.electronAPI) return;
@@ -1291,6 +1462,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isMvOpen,
         openMv,
         closeMv,
+        canGoBack,
+        canGoForward,
+        goBack,
+        goForward,
+        navigateTo,
+        isReloading,
         pauseAudio,
         resumeAudio,
         refreshLibrary,

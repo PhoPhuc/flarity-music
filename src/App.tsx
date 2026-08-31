@@ -18,8 +18,9 @@ import { LyricsSearchModal } from './components/LyricsSearchModal';
 import { BatchLyricsModal } from './components/BatchLyricsModal';
 import { UpdateNotificationModal } from './components/UpdateNotificationModal';
 import { useAppUpdater } from './hooks/useAppUpdater';
+import { NavigationHeader } from './components/NavigationHeader';
 import type { Album, Track } from './types';
-import { ListMusic, Play, Shuffle, Search, X } from 'lucide-react';
+import { ListMusic, Play, Shuffle, Search, X, ArrowLeft } from 'lucide-react';
 import { formatTime } from './utils/lrcParser';
 import { isTrackByArtist, getRandomArtistCover } from './utils/artistParser';
 import { convertFileSrc } from './utils/tauriBridge';
@@ -38,16 +39,66 @@ const ViewFallback = () => (
 
 const totalDuration = (tracks: Track[]) => tracks.reduce((total, track) => total + (track.duration || 0), 0);
 
-const CollectionHeader: React.FC<{ kind: string; title: string; subtitle: string; tracks: Track[]; cover?: string | null; artist?: boolean }> = ({ kind, title, subtitle, tracks, cover, artist }) => {
-  const { playTrack } = usePlayer();
+const CollectionHeader: React.FC<{
+  kind: string;
+  title: string;
+  subtitle: string;
+  tracks: Track[];
+  cover?: string | null;
+  artist?: boolean;
+}> = ({ kind, title, subtitle, tracks, cover, artist }) => {
+  const { playTrack, goBack, canGoBack } = usePlayer();
   const startPlayback = (shuffle = false) => {
     const queue = shuffle ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
     if (queue.length) playTrack(queue[0], queue);
   };
-  return <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 bg-gradient-to-b from-white/5 to-transparent p-6 pb-3">
-    <div className="grid h-36 w-36 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-neutral-800 shadow-2xl">{cover ? <img src={convertFileSrc(cover)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : artist ? <span className="text-5xl font-black text-apple-pink">{title.charAt(0).toUpperCase()}</span> : <ListMusic className="w-12 h-12 text-neutral-500" />}</div>
-    <div className="min-w-0 flex-1"><p className="text-xs font-bold uppercase tracking-widest text-apple-pink">{kind}</p><h1 className="mt-1 truncate text-3xl font-extrabold text-white sm:text-4xl">{title}</h1><p className="mt-2 text-sm text-neutral-300">{subtitle} · {tracks.length} bài hát · {formatTime(totalDuration(tracks))}</p><div className="mt-5 flex gap-3"><button onClick={() => startPlayback()} className="inline-flex items-center gap-2 rounded-full bg-apple-pink px-5 py-2.5 text-sm font-semibold text-white"><Play className="w-4 h-4 fill-current" />Phát</button><button onClick={() => startPlayback(true)} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/15"><Shuffle className="w-4 h-4" />Ngẫu nhiên</button></div></div>
-  </div>;
+  return (
+    <div className="flex flex-col gap-4 bg-gradient-to-b from-white/5 to-transparent p-6 pb-4">
+      {canGoBack && (
+        <button
+          onClick={goBack}
+          className="self-start flex items-center gap-2 text-xs font-bold text-neutral-400 hover:text-white transition-colors group cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <span>Quay lại</span>
+        </button>
+      )}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6">
+        <div className="grid h-36 w-36 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-neutral-800 shadow-2xl">
+          {cover ? (
+            <img src={convertFileSrc(cover)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+          ) : artist ? (
+            <span className="text-5xl font-black text-apple-pink">{title.charAt(0).toUpperCase()}</span>
+          ) : (
+            <ListMusic className="w-12 h-12 text-neutral-500" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold uppercase tracking-widest text-apple-pink">{kind}</p>
+          <h1 className="mt-1 truncate text-3xl font-extrabold text-white sm:text-4xl">{title}</h1>
+          <p className="mt-2 text-sm text-neutral-300">
+            {subtitle} · {tracks.length} bài hát · {formatTime(totalDuration(tracks))}
+          </p>
+          <div className="mt-5 flex gap-3">
+            <button
+              onClick={() => startPlayback()}
+              className="inline-flex items-center gap-2 rounded-full bg-apple-pink px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-apple-pink/25 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>Phát</span>
+            </button>
+            <button
+              onClick={() => startPlayback(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
+            >
+              <Shuffle className="w-4 h-4" />
+              <span>Ngẫu nhiên</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const MainContent: React.FC = () => {
@@ -125,9 +176,11 @@ const MainContent: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden relative">
       <div className="flex flex-1 min-h-0">
-      {/* Scrollable View Area */}
-      <div className="flex-1 overflow-y-auto pb-24 min-w-0">
-        <Suspense fallback={<ViewFallback />}>
+        {/* Scrollable View Area with Top Navigation Control Header */}
+        <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+          <NavigationHeader />
+          <div className="flex-1 overflow-y-auto pb-24 min-w-0">
+            <Suspense fallback={<ViewFallback />}>
           {viewMode === 'home' ? (
             <HomeView />
           ) : viewMode === 'discovery' ? (
@@ -249,8 +302,9 @@ const MainContent: React.FC = () => {
             </>
           ) : null}
         </Suspense>
-      </div>
-      {isLyricsOpen && <LyricsPanel />}
+          </div>
+        </div>
+        {isLyricsOpen && <LyricsPanel />}
       </div>
 
       {/* Global Context Menu */}
