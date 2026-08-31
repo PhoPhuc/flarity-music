@@ -46,6 +46,10 @@ import {
   ExternalLink,
   Loader2,
   RefreshCw,
+  Download,
+  ArrowUpCircle,
+  Package,
+  Calendar,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import {
@@ -70,17 +74,27 @@ import {
   DEFAULT_TRANSLATION_SETTINGS,
 } from '../types';
 import { testTranslationProvider } from '../services/lyricsTranslationService';
+import { useAppUpdater } from '../hooks/useAppUpdater';
+import { openExternalLink, detectPlatform, GITHUB_RELEASES_PAGE } from '../services/updateService';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type SettingsTab = 'storage' | 'audio' | 'translation' | 'folders' | 'general' | 'shortcuts';
+type SettingsTab = 'storage' | 'audio' | 'translation' | 'folders' | 'general' | 'shortcuts' | 'updates';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { tracks, albums, artistProfiles, selectFolderAndScan, isScanning } = usePlayer();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
+  const {
+    updateInfo,
+    isChecking: isCheckingUpdate,
+    checkNow: checkUpdateNow,
+    autoCheckEnabled,
+    toggleAutoCheck,
+    currentVersion,
+  } = useAppUpdater();
 
   // Scanner State & Telemetry
   const [scannerState, setScannerState] = useState<AudioScannerState>(audioScanner.getState());
@@ -455,6 +469,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               >
                 <Keyboard className="w-4 h-4 shrink-0" />
                 <span>Phím Tắt & Trợ Năng</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('updates')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'updates'
+                    ? 'bg-apple-pink text-white shadow-lg shadow-apple-pink/20'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <span>Cập Nhật & Giới Thiệu</span>
+                </div>
+                {updateInfo?.hasUpdate ? (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase bg-rose-500 text-white animate-pulse">
+                    Mới
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md font-mono bg-white/10 text-neutral-400">
+                    v{currentVersion}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -2105,6 +2142,184 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <span className="text-xs text-neutral-300 font-semibold">Đóng cửa sổ hoặc Thoát toàn màn hình</span>
                     <kbd className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-mono font-bold text-white">Esc</kbd>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===================== TAB: UPDATES & ABOUT ===================== */}
+            {activeTab === 'updates' && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-apple-pink/20 text-apple-pink border border-apple-pink/30 flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3" />
+                      APP RELEASES & UPDATES
+                    </span>
+                    <span className="text-xs font-medium text-neutral-400">Phiên bản & Tự động cập nhật</span>
+                  </div>
+                  <h3 className="text-xl font-black text-white tracking-tight mt-1">
+                    Cập Nhật Ứng Dụng & Giới Thiệu
+                  </h3>
+                </div>
+
+                {/* 1. App Identity Card */}
+                <div className="p-5 rounded-3xl bg-gradient-to-br from-white/[0.05] to-white/[0.01] border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-neutral-900 border border-white/10 flex items-center justify-center p-2.5 shadow-lg shadow-apple-pink/10 shrink-0">
+                      <img src="/logo.png" alt="Flarity Logo" className="w-full h-full object-contain" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-lg font-black text-white">Flarity Music</h4>
+                        <span className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-white/10 border border-white/15 text-neutral-200">
+                          v{currentVersion}
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-400 mt-1">
+                        Rust Tauri v2 • React 19 • Tailwind v4 • Web Audio Studio DSP
+                      </p>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        Hệ điều hành: {detectPlatform() === 'windows' ? 'Windows x64' : detectPlatform() === 'macos' ? 'macOS Universal' : 'Cross-Platform'} · Mã nguồn mở MIT
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => checkUpdateNow()}
+                    disabled={isCheckingUpdate}
+                    className="px-4 py-2.5 rounded-2xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-60 shadow-md"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isCheckingUpdate ? 'animate-spin text-apple-pink' : ''}`} />
+                    <span>{isCheckingUpdate ? 'Đang kiểm tra...' : 'Kiểm tra bản mới'}</span>
+                  </button>
+                </div>
+
+                {/* 2. Update Status Card */}
+                {isCheckingUpdate ? (
+                  <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-center gap-3 text-neutral-300 shadow-md">
+                    <Loader2 className="w-5 h-5 animate-spin text-apple-pink" />
+                    <span className="text-xs font-semibold">Đang kết nối máy chủ GitHub Releases để kiểm tra phiên bản mới...</span>
+                  </div>
+                ) : updateInfo?.hasUpdate ? (
+                  <div className="p-6 rounded-3xl bg-apple-pink/10 border border-apple-pink/40 space-y-4 shadow-xl ring-1 ring-apple-pink/30 animate-in fade-in duration-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-apple-pink/20 border border-apple-pink/40 flex items-center justify-center text-apple-pink">
+                          <Sparkles className="w-5 h-5 animate-pulse" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-apple-pink text-white">
+                              Có Bản Cập Nhật Mới
+                            </span>
+                            <span className="text-xs font-mono font-bold text-white">
+                              v{updateInfo.latestVersion}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-white mt-1">
+                            {updateInfo.releaseTitle || `Flarity Music v${updateInfo.latestVersion}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (updateInfo.recommendedAsset?.downloadUrl) {
+                            openExternalLink(updateInfo.recommendedAsset.downloadUrl);
+                          } else {
+                            openExternalLink(updateInfo.releaseUrl);
+                          }
+                        }}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-apple-pink to-rose-600 hover:brightness-110 text-white shadow-lg shadow-apple-pink/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Tải Bản Cập Nhật Ngay</span>
+                      </button>
+                    </div>
+
+                    {updateInfo.releaseNotes && (
+                      <div className="p-4 rounded-2xl bg-black/40 border border-white/10 text-xs text-neutral-300 whitespace-pre-wrap max-h-40 overflow-y-auto custom-scrollbar font-sans leading-relaxed">
+                        {updateInfo.releaseNotes}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between shadow-md">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-300">Ứng dụng đã được cập nhật mới nhất!</p>
+                        <p className="text-[11px] text-neutral-400 mt-0.5">
+                          Bạn đang trải nghiệm phiên bản Flarity Music v{currentVersion} đầy đủ tính năng và ổn định nhất.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => openExternalLink(GITHUB_RELEASES_PAGE)}
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white border border-white/10 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Xem Lịch Sử Bản Phát Hành</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 3. Auto-Check Preference */}
+                <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-white">Tự Động Kiểm Tra Bản Cập Nhật Mới</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Kiểm tra định kỳ trong nền khi khởi động ứng dụng và hiển thị thông báo khi có phiên bản mới.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => toggleAutoCheck(!autoCheckEnabled)}
+                      className={`w-12 h-6 rounded-full transition-colors p-1 cursor-pointer ${
+                        autoCheckEnabled ? 'bg-apple-pink' : 'bg-neutral-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          autoCheckEnabled ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Project Info & External Links */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => openExternalLink('https://github.com/PhoPhuc/flarity-music')}
+                    className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all flex items-center justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Globe className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <p className="text-xs font-bold text-white">Kho Lưu Trữ Mã Nguồn GitHub</p>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">github.com/PhoPhuc/flarity-music</p>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors" />
+                  </button>
+
+                  <button
+                    onClick={() => openExternalLink('https://github.com/PhoPhuc/flarity-music/issues')}
+                    className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all flex items-center justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <p className="text-xs font-bold text-white">Báo Cáo Lỗi & Đóng Góp Tính Năng</p>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">GitHub Issues & Feature Requests</p>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors" />
+                  </button>
                 </div>
               </div>
             )}

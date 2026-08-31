@@ -16,6 +16,8 @@ import { AudioQualityModal } from './components/AudioQualityModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LyricsSearchModal } from './components/LyricsSearchModal';
 import { BatchLyricsModal } from './components/BatchLyricsModal';
+import { UpdateNotificationModal } from './components/UpdateNotificationModal';
+import { useAppUpdater } from './hooks/useAppUpdater';
 import type { Album, Track } from './types';
 import { ListMusic, Play, Shuffle, Search, X } from 'lucide-react';
 import { formatTime } from './utils/lrcParser';
@@ -78,6 +80,7 @@ const MainContent: React.FC = () => {
 
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [artistSearchQuery, setArtistSearchQuery] = useState('');
+  const { updateInfo, isUpdateModalOpen, setIsUpdateModalOpen } = useAppUpdater();
 
   const filteredArtistProfiles = useMemo(() => {
     if (!artistSearchQuery.trim()) return artistProfiles;
@@ -279,6 +282,15 @@ const MainContent: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={closeSettings}
       />
+
+      {/* Auto-Update Notification Modal */}
+      {updateInfo && (
+        <UpdateNotificationModal
+          updateInfo={updateInfo}
+          isOpen={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+        />
+      )}
 
       {/* Online Lyrics Search Modal (LRCLIB REST API) */}
       <LyricsSearchModal
