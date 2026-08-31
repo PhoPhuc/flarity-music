@@ -19,7 +19,8 @@ import {
   Zap,
   RefreshCw,
   TrendingUp,
-  Compass
+  Compass,
+  ChevronRight,
 } from 'lucide-react';
 import type { Track, Album, Playlist, ArtistProfile } from '../types';
 import { usePlayer } from '../context/PlayerContext';
@@ -599,6 +600,25 @@ export const HomeView: React.FC = () => {
     }
   };
 
+  const handleHeroShuffle = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (heroData && heroData.tracks.length > 0) {
+      const shuffled = [...heroData.tracks].sort(() => Math.random() - 0.5);
+      playTrack(shuffled[0], shuffled);
+    }
+  };
+
+  const handleOpenHeroAlbum = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (heroData?.album) {
+      setSelectedAlbum(heroData.album);
+      setViewMode('album-detail');
+    } else if (heroData?.artist) {
+      setSelectedArtist(heroData.artist);
+      setViewMode('artist-detail');
+    }
+  };
+
   // ===================== SECTION RENDERERS =====================
 
   // Section 1: Hero Bản phát hành mới + Nghe lại (Đầy đủ 6 bài)
@@ -606,89 +626,189 @@ export const HomeView: React.FC = () => {
     <section key="hero-listen-again" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       {/* Hero Card */}
       {heroData && (
-        <div className="lg:col-span-6 space-y-4">
-          <div 
-            onClick={() => {
-              setSelectedArtist(heroData.artist);
-              setViewMode('artist-detail');
-            }}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-800 border border-white/10 shadow-md group-hover:scale-105 transition-transform shrink-0 flex items-center justify-center">
-              {heroData.artistAvatar ? (
-                <img 
-                  src={convertFileSrc(heroData.artistAvatar)} 
-                  alt={heroData.artist} 
-                  className="w-full h-full object-cover" 
-                  loading="lazy"
-                />
-              ) : (
-                <User className="w-5 h-5 text-apple-pink" />
-              )}
+        <div className="lg:col-span-6 space-y-3.5">
+          {/* Header with Artist Profile Pill & Highlight Badge */}
+          <div className="flex items-center justify-between">
+            <div 
+              onClick={() => {
+                setSelectedArtist(heroData.artist);
+                setViewMode('artist-detail');
+              }}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <div className="relative">
+                <div className="w-11 h-11 rounded-full overflow-hidden bg-neutral-800 border-2 border-white/20 shadow-lg group-hover:border-apple-pink group-hover:scale-105 transition-all shrink-0 flex items-center justify-center">
+                  {heroData.artistAvatar ? (
+                    <img 
+                      src={convertFileSrc(heroData.artistAvatar)} 
+                      alt={heroData.artist} 
+                      className="w-full h-full object-cover" 
+                      loading="lazy"
+                    />
+                  ) : (
+                    <User className="w-5 h-5 text-apple-pink" />
+                  )}
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-apple-pink border-2 border-[#121214] flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-2 h-2 text-white" />
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-apple-pink">
+                  Bản phát hành mới của
+                </p>
+                <h3 className="text-lg sm:text-xl font-black text-white group-hover:text-apple-pink transition-colors truncate flex items-center gap-1">
+                  <span>{heroData.artist}</span>
+                  <ChevronRight className="w-4 h-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-apple-pink" />
+                </h3>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-neutral-400">Bản phát hành mới của</p>
-              <h3 className="text-lg sm:text-xl font-black text-white group-hover:text-apple-pink transition-colors truncate">
-                {heroData.artist}
-              </h3>
-            </div>
+
+            {/* Accent Badge */}
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-neutral-300 backdrop-blur-md shadow-sm">
+              <Disc className="w-3.5 h-3.5 text-apple-pink animate-spin-slow" />
+              <span>Tiêu Điểm</span>
+            </span>
           </div>
 
-          <div className="rounded-3xl bg-gradient-to-br from-neutral-800/80 via-neutral-900/90 to-neutral-950/95 border border-white/10 p-6 flex flex-col sm:flex-row gap-6 shadow-2xl backdrop-blur-apple hover:border-white/20 transition-all duration-300 group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-apple-pink/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
+          {/* Main Card with Glassmorphism & Vinyl Record Animation */}
+          <div 
+            onClick={handleOpenHeroAlbum}
+            className="rounded-[2rem] bg-gradient-to-br from-white/[0.08] via-[#16161a]/95 to-[#0e0e12]/95 border border-white/15 p-6 sm:p-7 flex flex-col sm:flex-row gap-6 shadow-[0_20px_60px_rgba(0,0,0,0.75)] backdrop-blur-2xl hover:border-white/30 hover:shadow-[0_25px_70px_rgba(250,36,60,0.22)] transition-all duration-500 group relative overflow-hidden cursor-pointer"
+          >
+            {/* Ambient Multi-Color Gradient Lights */}
+            <div className="absolute -top-16 -right-16 w-80 h-80 bg-gradient-to-br from-apple-pink/25 via-purple-600/20 to-transparent rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-700" />
+            <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-transparent pointer-events-none" />
 
-            <div className="w-full sm:w-44 h-48 sm:h-44 rounded-2xl overflow-hidden bg-neutral-800 shrink-0 shadow-2xl border border-white/10 relative group-hover:scale-[1.02] transition-transform duration-300">
-              {heroData.cover ? (
-                <img 
-                  src={convertFileSrc(heroData.cover)} 
-                  alt={heroData.title} 
-                  className="w-full h-full object-cover" 
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Disc className="w-16 h-16 text-apple-pink/50" />
+            {/* Left Column: Sleeve + Vinyl Record Peek */}
+            <div className="relative shrink-0 flex items-center justify-center self-center sm:self-auto group/vinyl">
+              {/* Vinyl Disc Mechanism */}
+              <div 
+                className={`absolute w-36 h-36 sm:w-40 sm:h-40 rounded-full bg-[#111] border-2 border-neutral-800 shadow-[0_10px_30px_rgba(0,0,0,0.9)] flex items-center justify-center transition-all duration-500 z-0 ${
+                  isHeroTrackPlaying
+                    ? 'translate-x-9 sm:translate-x-12 animate-[spin_4s_linear_infinite]'
+                    : 'translate-x-2 sm:translate-x-4 group-hover/vinyl:translate-x-8 group-hover:translate-x-8'
+                }`}
+              >
+                {/* Vinyl Grooves */}
+                <div className="w-[88%] h-[88%] rounded-full border border-white/5 flex items-center justify-center">
+                  <div className="w-[72%] h-[72%] rounded-full border border-white/5 flex items-center justify-center">
+                    <div className="w-[52%] h-[52%] rounded-full border border-white/10 flex items-center justify-center">
+                      {/* Center Record Label */}
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-apple-pink/40 border border-white/30 flex items-center justify-center shadow-inner">
+                        {heroData.cover ? (
+                          <img src={convertFileSrc(heroData.cover)} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Disc className="w-6 h-6 text-white" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
-              {isHeroTrackPlaying && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px] rounded-2xl">
-                  <SoundWave className="scale-150" />
+              {/* Front Cover Sleeve */}
+              <div className="relative z-10 w-40 h-40 sm:w-44 sm:h-44 rounded-2xl overflow-hidden bg-neutral-900 shrink-0 shadow-[0_15px_35px_rgba(0,0,0,0.7)] border border-white/20 group-hover:border-white/40 group-hover:scale-[1.02] transition-all duration-300">
+                {heroData.cover ? (
+                  <img 
+                    src={convertFileSrc(heroData.cover)} 
+                    alt={heroData.title} 
+                    className="w-full h-full object-cover" 
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
+                    <Disc className="w-16 h-16 text-apple-pink/50" />
+                  </div>
+                )}
+
+                {/* Hi-Res Lossless Tag */}
+                <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md border border-white/20 text-[9px] font-black uppercase tracking-wider text-neutral-200 flex items-center gap-1 shadow-sm">
+                  <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                  <span>Hi-Res</span>
                 </div>
-              )}
+
+                {/* Audio Playing Equalizer Wave Overlay */}
+                {isHeroTrackPlaying && (
+                  <div className="absolute inset-0 bg-black/65 flex items-center justify-center backdrop-blur-[2px] rounded-2xl">
+                    <SoundWave className="scale-125" />
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col justify-between space-y-4">
-              <div className="space-y-1.5">
-                <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-                  {heroData.album ? 'Album' : 'Single'} • {heroData.artist}
-                </p>
-                <h2 className={`text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight line-clamp-2 transition-colors ${
+            {/* Right Column: Album Details & Creative Controls */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between space-y-4 text-center sm:text-left z-10">
+              <div className="space-y-2">
+                {/* Meta Badges */}
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-apple-pink text-white shadow-sm">
+                    {heroData.album ? 'ALBUM' : 'SINGLE'}
+                  </span>
+                  <span className="text-xs font-bold text-neutral-300 truncate max-w-[160px]">
+                    {heroData.artist}
+                  </span>
+                  <span className="text-neutral-600 hidden sm:inline">•</span>
+                  <span className="text-[11px] font-medium text-emerald-400 hidden sm:inline-flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Studio Master
+                  </span>
+                </div>
+
+                {/* Main Album Title */}
+                <h2 className={`text-2xl sm:text-3xl font-black tracking-tight leading-tight line-clamp-2 transition-colors ${
                   isHeroTrackCurrent ? 'text-apple-pink' : 'text-white'
                 }`}>
                   {heroData.title}
                 </h2>
-                <p className="text-xs text-neutral-400 font-medium">
-                  {heroData.trackCount} bài hát trong thư viện
+
+                {/* Track Count & Audio Format */}
+                <p className="text-xs text-neutral-400 font-medium flex items-center justify-center sm:justify-start gap-2">
+                  <span>{heroData.trackCount} bài hát trong thư viện</span>
+                  <span className="text-neutral-600">•</span>
+                  <span className="text-neutral-400">FLAC Lossless</span>
                 </p>
               </div>
 
-              <div className="flex items-center gap-3.5 pt-1">
+              {/* Action Buttons Bar */}
+              <div className="flex items-center justify-center sm:justify-start gap-3 pt-1" onClick={(e) => e.stopPropagation()}>
+                {/* Big Floating Play Button with Glowing Aura */}
                 <button
                   onClick={handleHeroPlay}
-                  className="w-12 h-12 rounded-full bg-apple-pink hover:bg-apple-pinkHover text-white flex items-center justify-center shadow-xl shadow-apple-pink/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                  title={isHeroTrackPlaying ? "Tạm dừng" : "Phát ngay"}
+                  className="h-12 px-6 rounded-full bg-gradient-to-r from-[#FA243C] to-[#E01E37] hover:brightness-110 text-white flex items-center justify-center gap-2 shadow-[0_8px_25px_rgba(250,36,60,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                  title={isHeroTrackPlaying ? "Tạm dừng" : "Phát toàn bộ album"}
                 >
                   {isHeroTrackPlaying ? (
-                    <Pause className="w-5 h-5 fill-current" />
+                    <>
+                      <Pause className="w-4 h-4 fill-current" />
+                      <span>Tạm dừng</span>
+                    </>
                   ) : (
-                    <Play className="w-5 h-5 fill-current ml-0.5" />
+                    <>
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                      <span>Phát ngay</span>
+                    </>
                   )}
                 </button>
 
+                {/* Shuffle Button */}
+                <button
+                  onClick={handleHeroShuffle}
+                  className="w-12 h-12 rounded-full border border-white/15 hover:border-white/30 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 bg-white/5 hover:bg-white/10 shadow-md backdrop-blur-md"
+                  title="Phát ngẫu nhiên album"
+                >
+                  <Shuffle className="w-4 h-4" />
+                </button>
+
+                {/* Add to Queue Button */}
                 <button
                   onClick={handleHeroAdd}
-                  className="w-10 h-10 rounded-full border border-white/20 hover:border-white text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 bg-white/5 hover:bg-white/10 shadow-md"
+                  className={`w-12 h-12 rounded-full border transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-md backdrop-blur-md ${
+                    isHeroAdded
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                      : 'border-white/15 hover:border-white/30 text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10'
+                  }`}
                   title="Thêm vào hàng đợi"
                 >
                   {isHeroAdded ? <Check className="w-4 h-4 text-emerald-400" /> : <Plus className="w-4 h-4" />}
