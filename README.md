@@ -4,14 +4,14 @@
 
 **Next-Gen Music Player: Audiophile Studio Grade • Multi-Engine AI Lyrics Translation • Ultra-Lightweight ~400MB RAM**
 
-[![Release](https://img.shields.io/badge/Release-v1.1.2-FA243C?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.2)
+[![Release](https://img.shields.io/badge/Release-v1.1.4-FA243C?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.4)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-06B6D4?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases)
 [![Rust](https://img.shields.io/badge/Backend-Rust%20Tauri%20v2-orange?style=for-the-badge&logo=rust)](https://tauri.app)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%208-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
 [![TailwindCSS](https://img.shields.io/badge/Styling-Tailwind%20v4-38B2AC?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-[**📥 Download for Windows & macOS**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.2) • [**✨ Key Features**](#-key-features) • [**📊 Benchmark Comparison**](#-comparison-flarity-vs-spotify-vs-apple-music) • [**🛠️ Build from Source**](#️-development--build-instructions)
+[**📥 Download for Windows & macOS**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.4) • [**✨ Key Features**](#-key-features) • [**📊 Benchmark Comparison**](#-comparison-flarity-vs-spotify-vs-apple-music) • [**🛠️ Build from Source**](#️-development--build-instructions)
 
 </div>
 
