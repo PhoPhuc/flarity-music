@@ -179,6 +179,13 @@ flarity-music/
 
 ---
 
+## 👥 Contributors
+
+- **[PhoPhuc](https://github.com/PhoPhuc)** — Lead Creator & Software Architect
+- **[Antigravity](https://deepmind.google/technologies/gemini/)** — AI Pair Programmer & Advanced Coding Agent (Google DeepMind)
+
+---
+
 ## 📜 License
 
 Distributed under the **MIT License**. See `LICENSE` for more information.
@@ -188,5 +195,6 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 <div align="center">
   <b>Engineered with a passion for audiophile sound and modern performance.</b>
 </div>
+
 
 
