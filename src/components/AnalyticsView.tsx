@@ -8,7 +8,8 @@ import {
   Headphones, 
   TrendingUp, 
   Sparkles,
-  Calendar
+  Calendar,
+  Camera
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useAnalyticsQuery } from '../hooks/useMusicQueries';
@@ -17,6 +18,15 @@ import { formatDurationInMinutes } from '../utils/lrcParser';
 import { SoundWave } from './SoundWave';
 import { parseArtistNames, isTrackByArtist, getRandomArtistCover } from '../utils/artistParser';
 import { convertFileSrc } from '../utils/tauriBridge';
+import { ChartExportModal } from './ChartExportModal';
+
+const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+  '1h': '1 Giờ Qua',
+  'today': 'Hôm Nay',
+  'week': 'Tuần Này',
+  'month': 'Tháng Này',
+  'all': 'Tất Cả Thời Gian',
+};
 
 type TimeRange = '1h' | 'today' | 'week' | 'month' | 'all';
 
@@ -45,6 +55,7 @@ interface TopArtistStat {
 export const AnalyticsView: React.FC = () => {
   const { playTrack, tracks, currentTrack, isPlaying } = usePlayer();
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useAnalyticsQuery(timeRange);
@@ -54,7 +65,7 @@ export const AnalyticsView: React.FC = () => {
     totalValidPlays: 0,
     totalUniqueSongs: 0,
   };
-  const topSongs: TopTrackStat[] = data?.topSongs || [];
+  const topSongs: TopTrackStat[] = (data?.topSongs || []).slice(0, 10);
 
   // Tách và cộng dồn dữ liệu cho từng nghệ sĩ riêng biệt (không gộp chung khi feat hay dùng dấu /)
   const topArtists: TopArtistStat[] = useMemo(() => {
@@ -121,7 +132,7 @@ export const AnalyticsView: React.FC = () => {
       return b.playCount - a.playCount;
     });
 
-    return list.slice(0, 30);
+    return list.slice(0, 10);
   }, [topSongs, data?.topArtists, tracks]);
 
   // Đăng ký nhận IPC Event Realtime khi có lượt nghe vừa đạt chuẩn
@@ -171,29 +182,42 @@ export const AnalyticsView: React.FC = () => {
           <p className="text-sm text-neutral-400 mt-1">Phân tích hành vi nghe nhạc offline được tự động đồng bộ theo thời gian thực</p>
         </div>
 
-        {/* Time Range Tabs */}
-        <div className="flex items-center bg-neutral-900/80 p-1.5 rounded-2xl border border-white/10 shrink-0">
-          {(
-            [
-              { id: '1h', label: '1 Giờ Qua' },
-              { id: 'today', label: 'Hôm Nay' },
-              { id: 'week', label: 'Tuần Này' },
-              { id: 'month', label: 'Tháng Này' },
-              { id: 'all', label: 'Tất Cả' }
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setTimeRange(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
-                timeRange === tab.id
-                  ? 'bg-apple-pink text-white shadow-lg shadow-apple-pink/20'
-                  : 'text-neutral-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Right side: Time Range Tabs & Camera Snapshot Button */}
+        <div className="flex items-center flex-wrap gap-3">
+          {/* Time Range Tabs */}
+          <div className="flex items-center bg-neutral-900/80 p-1.5 rounded-2xl border border-white/10 shrink-0">
+            {(
+              [
+                { id: '1h', label: '1 Giờ Qua' },
+                { id: 'today', label: 'Hôm Nay' },
+                { id: 'week', label: 'Tuần Này' },
+                { id: 'month', label: 'Tháng Này' },
+                { id: 'all', label: 'Tất Cả' }
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setTimeRange(tab.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  timeRange === tab.id
+                    ? 'bg-apple-pink text-white shadow-lg shadow-apple-pink/20'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Nút Chụp Ảnh Bảng Xếp Hạng */}
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#FA243C] to-[#E01E37] hover:brightness-110 text-white font-bold text-xs shadow-lg shadow-apple-pink/25 flex items-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0"
+            title="Chụp ảnh & Xuất poster bảng xếp hạng kèm logo Flarity"
+          >
+            <Camera className="w-4 h-4" />
+            <span>Chụp Bảng Xếp Hạng</span>
+          </button>
         </div>
       </div>
 
@@ -263,7 +287,7 @@ export const AnalyticsView: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Flame className="w-5 h-5 text-apple-pink fill-apple-pink" />
-              <h2 className="text-lg font-bold text-white tracking-tight">Top Bài Hát Nghe Nhiều Nhất</h2>
+              <h2 className="text-lg font-bold text-white tracking-tight">Top 10 Bài Hát Nghe Nhiều Nhất</h2>
             </div>
             <span className="text-xs text-neutral-500">Realtime</span>
           </div>
@@ -343,7 +367,7 @@ export const AnalyticsView: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <TrendingUp className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-bold text-white tracking-tight">Top Nghệ Sĩ Được Yêu Thích</h2>
+              <h2 className="text-lg font-bold text-white tracking-tight">Top 10 Nghệ Sĩ Được Yêu Thích</h2>
             </div>
             <span className="text-xs text-neutral-500">Realtime</span>
           </div>
@@ -402,6 +426,15 @@ export const AnalyticsView: React.FC = () => {
       </div>
     </>
   )}
+
+  {/* Modal Chụp & Xuất Ảnh Poster Bảng Xếp Hạng */}
+  <ChartExportModal
+    isOpen={isExportModalOpen}
+    onClose={() => setIsExportModalOpen(false)}
+    topSongs={topSongs}
+    topArtists={topArtists}
+    timeRangeLabel={TIME_RANGE_LABELS[timeRange]}
+  />
 </div>
   );
 };
