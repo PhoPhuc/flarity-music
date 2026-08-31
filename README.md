@@ -2,7 +2,7 @@
 
 # 🎵 Flarity Music
 
-**Trình phát nhạc thế hệ mới: Chuẩn phòng thu Audiophile • Dịch lời bài hát bằng AI • Siêu nhẹ chỉ ~400MB RAM**
+**Next-Gen Music Player: Audiophile Studio Grade • Multi-Engine AI Lyrics Translation • Ultra-Lightweight ~400MB RAM**
 
 [![Release](https://img.shields.io/badge/Release-v1.1.2-FA243C?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.2)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-06B6D4?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases)
@@ -11,89 +11,90 @@
 [![TailwindCSS](https://img.shields.io/badge/Styling-Tailwind%20v4-38B2AC?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-[**📥 Tải Về Cho Windows & macOS**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.2) • [**✨ Tính Năng Nổi Bật**](#-tính-năng-nổi-bật) • [**📊 So Sánh Hiệu Năng**](#-so-sánh-với-spotify--apple-music) • [**🛠️ Hướng Dẫn Cài Đặt & Biên Dịch**](#️-hướng-dẫn-phát-triển--biên-dịch)
+[**📥 Download for Windows & macOS**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.2) • [**✨ Key Features**](#-key-features) • [**📊 Benchmark Comparison**](#-comparison-flarity-vs-spotify-vs-apple-music) • [**🛠️ Build from Source**](#️-development--build-instructions)
 
 </div>
 
 ---
 
-## 🌟 Giới Thiệu (Overview)
+## 🌟 Overview
 
-**Flarity Music** là ứng dụng nghe nhạc và trình chiếu đa phương tiện cao cấp được thiết kế với mục tiêu mang lại trải nghiệm âm thanh thuần khiết, tốc độ phản hồi tức thì và tính thẩm mỹ vượt trội.
+**Flarity Music** is a state-of-the-art desktop & web audio player engineered for pristine acoustic fidelity, lightning-fast responsiveness, and modern aesthetic elegance.
 
-Được xây dựng trên nền tảng **Rust (Tauri v2)** kết hợp với **React 19** và **Web Audio DSP**, Flarity Music giải phóng máy tính của bạn khỏi sự nặng nề của các ứng dụng nền Electron truyền thống: **chỉ tiêu thụ ~400MB RAM**, khởi động trong **0.35 giây**, hoàn toàn **không quảng cáo** và không thu thập dữ liệu gián điệp.
+Built on **Rust (Tauri v2)**, **React 19**, and **Web Audio DSP**, Flarity Music frees your machine from bloated Electron architectures: consuming only **~400MB RAM**, launching in **0.35 seconds**, and remaining **100% ad-free and privacy-focused** with zero telemetry tracking.
 
 ---
 
-## ✨ Tính Năng Nổi Bật (Key Features)
+## ✨ Key Features
 
-### 🤖 1. Hệ Sinh Thái Dịch Lời Bài Hát Bằng AI Đa Mô Hình (AI Bilingual Lyrics)
-- **Thấu hiểu văn hóa & thi ca**: Tự động phân tích ngữ cảnh, tâm trạng bài hát, phong cách nghệ sĩ và ẩn dụ để dịch thoát ý, êm tai và giàu nhạc tính.
-- **Hỗ trợ đa dạng Engine AI hàng đầu**:
-  - **Google Gemini**: Mặc định **`gemini-3.5-flash-lite`** (siêu nhanh & nhẹ), **`gemini-3.7-flash`**, `gemini-2.0-flash`, `gemini-2.0-pro-exp-02-05`, `gemini-1.5-pro` và hỗ trợ nhập bất kỳ Model ID tùy chỉnh nào.
-  - **Anthropic Claude**: Mặc định **`claude-3-7-sonnet-20250219`** (Flagship 3.7 với tư duy Hybrid Reasoning), `claude-3-5-sonnet`, `claude-3-5-haiku`.
+### 🤖 1. Multi-Engine AI Bilingual Lyrics Translation (Contextual & Poetic)
+- **Deep Cultural & Poetic Adaptation**: Analyzes musical context, emotional subtext, artist persona, and metaphorical nuances to deliver flowing, singable, and faithful translations.
+- **Top-Tier AI Provider Support**:
+  - **Google Gemini**: Default **`gemini-3.5-flash-lite`** (ultra-fast & lightweight), **`gemini-3.7-flash`**, `gemini-2.0-flash`, `gemini-2.0-pro-exp-02-05`, `gemini-1.5-pro`, plus custom Model ID support.
+  - **Anthropic Claude**: Default **`claude-3-7-sonnet-20250219`** (Flagship 3.7 with Hybrid Reasoning), `claude-3-5-sonnet`, `claude-3-5-haiku`.
   - **OpenAI**: `gpt-4o`, `gpt-4o-mini`, `o3-mini`, `gpt-4.5-preview`.
-  - **OpenRouter**: Kết nối tức thì tới Claude 3.7, Gemini 2.0, DeepSeek V3, Llama 3.3.
-  - **Google Dịch Tự Động**: Miễn phí 100%, không cần tài khoản hay API Key.
-  - **Custom OpenAI-Compatible API**: Tương thích hoàn hảo với Ollama, LM Studio (Private Local AI).
-- **Bộ lọc làm sạch thông minh (`stripLineIndexPrefix`)**: Tự động loại bỏ hoàn toàn các tiền tố số thứ tự (`[10]`, `(1)`, `1.`), giữ lời dịch luôn mượt mà.
-- **Tùy biến hiển thị Sub-text phong phú**:
-  - 4 Phong cách mẫu: **Apple Music**, **Spotify**, **Cinema Subtitle**, **Song Ca Neon Glow**.
-  - 3 Cỡ chữ linh hoạt: Nhỏ xinh (`tiny`), Vừa vặn (`small`), Rõ nét (`medium`).
-  - Bảng màu sẵn có & Color Picker tự do chọn mọi mã màu Hex.
+  - **OpenRouter**: Instant access to Claude 3.7, Gemini 2.0, DeepSeek V3, Llama 3.3.
+  - **Google Translate Engine**: Automatic, free forever, zero API keys required.
+  - **Custom OpenAI-Compatible Endpoint**: Full compatibility with Ollama, LM Studio, and private local servers.
+- **Smart Prefix Sanitizer (`stripLineIndexPrefix`)**: Automatically strips numbering artifacts (`[10]`, `(1)`, `1.`) to keep translated lines clean.
+- **Customizable Sub-Text Rendering**:
+  - 4 Style Presets: **Apple Music**, **Spotify**, **Cinema Subtitle**, **Duet Neon Glow**.
+  - 3 Sizing Options: Tiny (`tiny`), Balanced (`small`), Large (`medium`).
+  - Pre-curated palettes & HTML5 Hex Color Picker.
 
-### 🎧 2. Trình Phát Âm Thanh Hi-Res Lossless & Bộ DSP Chuyên Nghiệp
-- **Định dạng hỗ trợ**: FLAC 24-bit/192kHz, ALAC, WAV, DSD, MP3, AAC, OGG, OPUS, M4A.
-- **Bộ cân bằng 10-Band Graphic Equalizer**: 32Hz đến 16kHz kèm các Preset chuyên nghiệp (*Vocal Boost, Bass Heavy, Acoustic, Electronic, Rock, R&B, Flat*).
-- **Hiệu ứng âm thanh không gian**: Analog Bass Booster, Spatial Reverb phòng hòa nhạc, Stereo Widener.
-- **Chuẩn hóa âm lượng (Volume Normalization)**: Chuẩn EBU R128 / LUFS giúp chuyển bài êm ái, cân bằng độ to nhỏ tự động.
+### 🎧 2. Audiophile Hi-Res Lossless Audio & DSP Engine
+- **Broad Format Decoding**: FLAC 24-bit/192kHz, ALAC, WAV, DSD, MP3, AAC, OGG, OPUS, M4A.
+- **10-Band Graphic Equalizer**: 32Hz to 16kHz with professional studio presets (*Vocal Boost, Bass Heavy, Acoustic, Electronic, Rock, R&B, Flat*).
+- **Spatial Acoustic Enhancements**: Hardware-modeled Analog Bass Booster, Concert Hall Spatial Reverb, Stereo Width Expander.
+- **Loudness Normalization**: EBU R128 / LUFS standard prevents jarring volume jumps between tracks.
+- **Gapless Playback & Crossfade**: Smooth, uninterrupted transitions.
 
-### 🎨 3. Giao Diện Kính Mờ Glassmorphism & 4 Chế Độ Visualizer
-- **4 Chế độ Shaders nền sống động**:
-  - *Dynamic Canvas Fluid*: Dòng chảy màu sắc biến thiên theo ảnh bìa Album.
-  - *Ambient Waveform*: Sóng âm 3D dao động theo nhịp điệu bài hát.
-  - *Particle Cloud*: Mây hạt phát sáng nhảy theo tần số bass.
-  - *Glass Blur*: Hiệu ứng kính mờ tối giản, sang trọng.
-- **True Native Fullscreen**: Chế độ toàn màn hình không viền chuyên nghiệp, tự động ẩn trỏ chuột khi xem lời bài hát.
+### 🎨 3. Glassmorphism Design & 4 Dynamic Visualizer Shaders
+- **4 Live Background Shaders**:
+  - *Dynamic Canvas Fluid*: Morphing fluid colors driven by the active album art palette.
+  - *Ambient Waveform*: 3D audio waves pulsating in real time.
+  - *Particle Cloud*: Reactive particle clouds vibrating with bass frequencies.
+  - *Glass Blur*: Minimalist frosted glass aesthetic.
+- **True Native Fullscreen**: Distraction-free full-screen lyric immersion with automatic cursor hiding.
 
-### 📥 4. Tải Nhạc Đa Luồng Siêu Tốc & Tìm Kiếm YouTube
-- Tìm kiếm và stream hàng triệu bài hát trực tuyến từ YouTube Music chất lượng cao không cần đăng nhập.
-- Tải nhạc đa luồng tốc độ cao, tự động nhúng Tag ID3/FLAC metadata và ảnh bìa chất lượng cao vào tệp tải về.
-- Xem Music Video 1080p với chế độ cửa sổ nổi Picture-in-Picture (PiP).
+### 📥 4. High-Speed Multithreaded Downloader & YouTube Integration
+- Discover and stream millions of tracks online from YouTube Music in high definition without logging in.
+- High-speed multithreaded downloads with automatic ID3/FLAC metadata tagging and high-res cover art embedding.
+- 1080p Music Video player with floating Picture-in-Picture (PiP) mode.
 
 ---
 
-## 📊 So Sánh Với Spotify & Apple Music
+## 📊 Comparison: Flarity vs. Spotify vs. Apple Music
 
-| Tiêu Chí / Tính Năng | 🚀 FLARITY MUSIC | 🟢 SPOTIFY DESKTOP | 🍎 APPLE MUSIC WINDOWS |
+| Feature / Metric | 🚀 FLARITY MUSIC | 🟢 SPOTIFY DESKTOP | 🍎 APPLE MUSIC WINDOWS |
 | :--- | :---: | :---: | :---: |
-| **Kiến trúc Engine** | **Rust Tauri v2 + React 19** | Electron / CEF | UWP / WebView Container |
-| **Mức tiêu thụ RAM trung bình** | **~400 MB** *(Siêu tiết kiệm)* | **~950 MB - 1.6 GB** | **~800 MB - 1.2 GB** |
-| **Thời gian khởi động (Startup)**| **~0.35 giây** *(Gần như tức thì)* | ~2.80 giây | ~3.20 giây |
-| **Dung lượng bộ cài đặt (Size)** | **~5.95 MB (ZIP Portable)** | ~280 MB | ~180 MB |
-| **Dịch Lời Bài Hát Bằng AI** | ✅ **Đa mô hình (Gemini, Claude, GPT)**| ❌ Không có | ❌ Không có |
-| **Tùy biến Style Lời Dịch** | ✅ **Apple / Spotify / Cinema / Neon**| ❌ Không có | ❌ Không có |
-| **Chế độ Không Lời (Instrumental)**| ✅ **Có (Ambient 3D Waves)** | ❌ Màn hình trống | ❌ Không có |
-| **Chất lượng âm thanh tối đa** | ✅ **Hi-Res FLAC 24-bit / 192kHz** | ⚠️ Ogg 320kbps (Lossy) | ✅ ALAC Lossless (Trả phí) |
-| **Equalizer 10-Band & DSP Bass**| ✅ **Tích hợp sẵn & Tự do tùy chỉnh** | ⚠️ EQ 6-band cơ bản | ⚠️ EQ cơ bản hạn chế |
-| **Tải nhạc Offline về máy** | ✅ **Tải FLAC/MP3 trực tiếp miễn phí** | ⚠️ Bị mã hóa DRM | ⚠️ Bị mã hóa DRM |
-| **Quảng cáo xen ngang (Ads)** | 🚫 **100% Hoàn toàn không quảng cáo**| ⚠️ Quảng cáo dày đặc (Bản Free)| ⚠️ Bắt buộc trả phí theo tháng|
-| **Quyền riêng tư & Telemetry** | 🔒 **100% Local / Không theo dõi** | ⚠️ Thu thập dữ liệu người dùng | ⚠️ Thu thập dữ liệu Apple ID |
-| **Mô hình chi phí** | 🎁 **Miễn Phí & Mã Nguồn Mở** | 💵 59.000đ - 119.000đ / tháng | 💵 65.000đ / tháng |
+| **Core Architecture** | **Rust Tauri v2 + React 19** | Electron / CEF | UWP / WebView Container |
+| **Average RAM Footprint** | **~400 MB** *(Ultra-lightweight)*| **~950 MB - 1.6 GB** | **~800 MB - 1.2 GB** |
+| **Startup Latency** | **~0.35 seconds** *(Instant)* | ~2.80 seconds | ~3.20 seconds |
+| **Installer Size** | **~5.95 MB (Portable ZIP)** | ~280 MB | ~180 MB |
+| **AI Lyrics Translation** | ✅ **Multi-Model (Gemini, Claude, GPT)**| ❌ None | ❌ None |
+| **Custom Lyrics Styles** | ✅ **Apple / Spotify / Cinema / Neon**| ❌ None | ❌ None |
+| **Instrumental Ambient Mode** | ✅ **Yes (3D Wave Visualizer)** | ❌ Blank Screen | ❌ None |
+| **Maximum Audio Quality** | ✅ **Hi-Res FLAC 24-bit / 192kHz** | ⚠️ Ogg 320kbps (Lossy) | ✅ ALAC Lossless (Subscription) |
+| **10-Band Equalizer & DSP** | ✅ **Built-in & Fully Customizable** | ⚠️ Basic 6-band EQ | ⚠️ Limited Basic EQ |
+| **Direct Offline Audio Download** | ✅ **Direct FLAC/MP3 (DRM-Free)** | ⚠️ Encrypted Cache (DRM) | ⚠️ Encrypted Cache (DRM) |
+| **Audio Ads / Interruptions** | 🚫 **100% Completely Ad-Free** | ⚠️ Heavy Ads (Free tier) | ⚠️ Mandatory Monthly Sub |
+| **Privacy & Telemetry** | 🔒 **100% Local / Zero Tracking** | ⚠️ Telemetry & Behavioral Profiling | ⚠️ Apple ID Telemetry |
+| **Price** | 🎁 **Free & Open Source (MIT)** | 💵 $10.99 - $16.99 / month | 💵 $10.99 / month |
 
 ---
 
-## ⚡ Đo Lường Hiệu Năng & Tiêu Thụ RAM
+## ⚡ Performance & Memory Benchmark
 
 ```
-Mức tiêu thụ RAM trung bình (Megabytes - Càng thấp càng tốt):
+Average RAM Consumption (Megabytes - Lower is Better):
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Flarity Music :  ██████████ 400 MB                                     │
 │ Apple Music   :  ████████████████████ 800 MB - 1.2 GB                  │
-│ Spotify App   :  ██──────────────────────────────── 1.4 GB             │
+│ Spotify App   :  ████████████████████████████████ 1.4 GB               │
 └────────────────────────────────────────────────────────────────────────┘
 
-Thời gian khởi động ứng dụng (Giây - Càng thấp càng tốt):
+Application Startup Latency (Seconds - Lower is Better):
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Flarity Music :  █ 0.35s                                               │
 │ Spotify App   :  ████████ 2.80s                                        │
@@ -103,88 +104,89 @@ Thời gian khởi động ứng dụng (Giây - Càng thấp càng tốt):
 
 ---
 
-## 📥 Tải Về (Downloads)
+## 📥 Downloads
 
-Truy cập [**GitHub Releases**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.2) để tải bản phát hành mới nhất:
+Get the latest release from [**GitHub Releases**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.2):
 
 ### 🪟 Windows (x64)
-- **[`Flarity-Music-1.1.2-x64-setup.exe`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.2/Flarity-Music-1.1.2-x64-setup.exe)**: Bộ cài đặt chuẩn Windows (NSIS).
-- **[`Flarity-Music-1.1.2-portable-x64.zip`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.2/Flarity-Music-1.1.2-portable-x64.zip)**: Bản Portable nén gọn kèm `WebView2Loader.dll` (giải nén chạy ngay).
-- **[`Flarity-Music-1.1.2-x64.msi`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.2/Flarity-Music-1.1.2-x64.msi)**: Bộ cài đặt MSI doanh nghiệp.
+- **[`Flarity-Music-1.1.2-x64-setup.exe`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.2/Flarity-Music-1.1.2-x64-setup.exe)**: Windows Installer (NSIS).
+- **[`Flarity-Music-1.1.2-portable-x64.zip`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.2/Flarity-Music-1.1.2-portable-x64.zip)**: Portable standalone package with bundled `WebView2Loader.dll`.
+- **[`Flarity-Music-1.1.2-x64.msi`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.2/Flarity-Music-1.1.2-x64.msi)**: Enterprise Windows Installer.
 
-### 🍎 macOS (Apple Silicon M1/M2/M3/M4 & Intel)
-- **`Flarity-Music-macOS-Universal.dmg`**: Tự động biên dịch qua [GitHub Actions](https://github.com/PhoPhuc/flarity-music/actions).
+### 🍎 macOS (Apple Silicon M1-M4 & Intel)
+- **`Flarity-Music-macOS-Universal.dmg`**: Automated Universal Binary bundle built via [GitHub Actions](https://github.com/PhoPhuc/flarity-music/actions).
 
 ---
 
-## 🛠️ Hướng Dẫn Phát Triển & Biên Dịch (Development)
+## 🛠️ Development & Build Instructions
 
-### Yêu cầu môi trường:
-- **Node.js** (v18 trở lên) & **npm**
-- **Rust toolchain** (`cargo`, `rustc` 1.80 trở lên)
+### Prerequisites:
+- **Node.js** (v18+) & **npm**
+- **Rust Toolchain** (`cargo`, `rustc` 1.80+)
 
-### 1. Cài đặt mã nguồn:
+### 1. Clone the repository:
 ```bash
 git clone https://github.com/PhoPhuc/flarity-music.git
 cd flarity-music
 npm install
 ```
 
-### 2. Chạy môi trường phát triển (Dev Mode):
+### 2. Run in Development Mode:
 ```bash
 npm run dev
 ```
 
-### 3. Đóng gói cho Windows:
+### 3. Build for Windows:
 ```bash
 npm run dist
 ```
-*Tệp thực thi và bộ cài đặt sẽ được tạo trong thư mục `release/`.*
+*Binaries and installers will be generated inside the `release/` directory.*
 
-### 4. Đóng gói cho macOS (Universal DMG):
+### 4. Build for macOS (Universal DMG):
 ```bash
 npm run build:macos
 ```
 
 ---
 
-## 🏛️ Cấu Trúc Mã Nguồn (Project Structure)
+## 🏛️ Project Architecture
 
 ```
 flarity-music/
-├── .github/workflows/          # Quy trình CI/CD tự động hóa build Windows & macOS
-├── public/                     # Tài nguyên tĩnh
-├── scripts/                    # Scripts đóng gói Portable và phát hành
-├── src/                        # Mã nguồn Frontend (React 19 + TypeScript)
-│   ├── components/             # Các thành phần UI Glassmorphism
-│   │   ├── LyricView.tsx       # Trình hiển thị lời bài hát & Sub-text AI
-│   │   ├── LyricsPanel.tsx     # Bảng điều khiển lời bài hát
-│   │   ├── LyricsTranslationPopover.tsx # Hộp thoại dịch nhanh
-│   │   ├── LyricsVisualizerBg.tsx       # Shaders hiệu ứng nền
-│   │   ├── SettingsModal.tsx   # Cài đặt âm thanh, AI Key, giao diện
+├── .github/workflows/          # Cross-platform CI/CD for Windows & macOS builds
+├── public/                     # Static assets
+├── scripts/                    # Portable packaging & release automation
+├── src/                        # Frontend codebase (React 19 + TypeScript)
+│   ├── components/             # Glassmorphism UI components
+│   │   ├── LyricView.tsx       # Synchronized lyrics & AI sub-text renderer
+│   │   ├── LyricsPanel.tsx     # Lyrics sidebar controller
+│   │   ├── LyricsTranslationPopover.tsx # Quick translation popover
+│   │   ├── LyricsVisualizerBg.tsx       # Real-time background shaders
+│   │   ├── SettingsModal.tsx   # Audio, AI API keys & appearance configuration
 │   │   └── ...
-│   ├── context/                # Trạng thái toàn cục (PlayerContext)
-│   ├── services/               # Dịch vụ dịch thuật AI (lyricsTranslationService.ts)
-│   ├── utils/                  # Xử lý âm thanh DSP, LRC parser, Tauri bridge
-│   ├── types.ts                # Định nghĩa kiểu dữ liệu TypeScript
-│   └── App.tsx                 # Khung ứng dụng chính
-├── src-tauri/                  # Nhân Backend (Rust Tauri v2)
-│   ├── src/                    # Lệnh Rust IPC, quét thư viện, xử lý I/O
-│   ├── tauri.conf.json         # Cấu hình đa nền tảng Windows & macOS
-│   └── Cargo.toml              # Dependencies Rust
-├── package.json                # Cấu hình npm scripts & dependencies
+│   ├── context/                # Global state management (PlayerContext)
+│   ├── services/               # Multi-provider AI service (lyricsTranslationService.ts)
+│   ├── utils/                  # Web Audio DSP, LRC parser, Tauri IPC bridge
+│   ├── types.ts                # Strict TypeScript interfaces & definitions
+│   └── App.tsx                 # Core application shell
+├── src-tauri/                  # Backend Core (Rust Tauri v2)
+│   ├── src/                    # Rust IPC commands, file scanning, I/O processing
+│   ├── tauri.conf.json         # Cross-platform desktop configuration
+│   └── Cargo.toml              # Rust crate dependencies
+├── package.json                # npm scripts & dependencies
 └── README.md
 ```
 
 ---
 
-## 📜 Giấy Phép (License)
+## 📜 License
 
-Dự án được phân phối dưới giấy phép mã nguồn mở **MIT License**. Bạn có thể tự do sử dụng, tùy biến và đóng góp phát triển.
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
 <div align="center">
-  <b>Phát triển với niềm đam mê âm thanh đỉnh cao và công nghệ hiện đại.</b>
+  <b>Engineered with a passion for audiophile sound and modern performance.</b>
 </div>
+
 
