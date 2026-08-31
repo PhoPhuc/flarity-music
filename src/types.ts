@@ -79,6 +79,8 @@ export type TranslationFontSize = 'tiny' | 'small' | 'medium';
 
 export interface TranslationSettings {
   enabled: boolean;
+  autoTranslate: boolean; // false = Thủ công (Mặc định), true = Tự động dịch khi mở bài hát
+  autoTranslateProvider: TranslationProvider; // Trình dịch được chọn để tự động dịch khi mở bài hát
   provider: TranslationProvider;
   targetLanguage: string; // 'vi', 'en', 'ja', 'ko', 'zh-CN', 'fr', 'es', etc.
   
@@ -102,7 +104,9 @@ export interface TranslationSettings {
 }
 
 export const DEFAULT_TRANSLATION_SETTINGS: TranslationSettings = {
-  enabled: false,
+  enabled: true,
+  autoTranslate: false, // Mặc định là thủ công, không tự động dịch
+  autoTranslateProvider: 'google',
   provider: 'google',
   targetLanguage: 'vi',
   style: 'apple',

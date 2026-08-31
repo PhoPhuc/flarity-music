@@ -176,7 +176,41 @@ export const LyricsTranslationPopover: React.FC<LyricsTranslationPopoverProps> =
       </div>
 
       <div className="space-y-3.5 pt-3">
-        {/* Toggle bật/tắt */}
+        {/* Chế độ dịch hiện tại banner */}
+        <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-neutral-200">Chế độ dịch:</span>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  settings.autoTranslate
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-neutral-800 text-neutral-300 border border-white/10'
+                }`}
+              >
+                {settings.autoTranslate ? 'Tự động khi mở' : 'Thủ công'}
+              </span>
+            </div>
+            <p className="text-[10px] text-neutral-400">
+              {settings.autoTranslate
+                ? `Tự động dịch với ${settings.autoTranslateProvider || settings.provider}`
+                : 'Nhấn nút Dịch Ngay bên dưới để dịch bài này'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              onClose();
+              openSettings();
+            }}
+            className="text-[10px] text-apple-pink font-bold hover:underline cursor-pointer flex items-center gap-1 shrink-0 bg-apple-pink/10 px-2 py-1 rounded-lg border border-apple-pink/20"
+            title="Đổi sang tự động dịch hoặc chọn trình dịch trong Cài Đặt"
+          >
+            <SettingsIcon className="w-3 h-3" />
+            <span>Cài đặt</span>
+          </button>
+        </div>
+
+        {/* Toggle bật/tắt hiển thị */}
         <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
           <div className="space-y-0.5">
             <span className="text-xs font-bold text-neutral-200">Hiển thị bản dịch</span>

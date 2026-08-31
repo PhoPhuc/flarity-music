@@ -67,7 +67,9 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
     };
   }, []);
 
-  // Tải bản dịch cho bài hát hiện tại nếu bật chế độ dịch
+  // Tải bản dịch cho bài hát hiện tại:
+  // - Nếu đã có bản dịch trong cache: hiển thị ngay lập tức
+  // - Nếu chưa có: CHỈ tự động gọi API dịch nếu người dùng ĐÃ BẬT "Tự động dịch" trong Cài Đặt (mặc định là Thủ công)
   useEffect(() => {
     if (!currentTrack || lyrics.length === 0) {
       setTranslatedLinesMap({});
@@ -75,7 +77,14 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
     }
 
     const trackKey = currentTrack.id || `${currentTrack.title}_${currentTrack.artist}`;
-    const cached = getCachedTranslation(trackKey, transSettings.targetLanguage, transSettings.provider);
+    const activeProvider = transSettings.autoTranslate
+      ? (transSettings.autoTranslateProvider || transSettings.provider)
+      : transSettings.provider;
+
+    const cached =
+      getCachedTranslation(trackKey, transSettings.targetLanguage, activeProvider) ||
+      getCachedTranslation(trackKey, transSettings.targetLanguage, transSettings.provider) ||
+      getCachedTranslation(trackKey, transSettings.targetLanguage, 'google');
 
     if (cached && cached.length === lyrics.length) {
       const map: Record<number, string> = {};
@@ -85,8 +94,8 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
         }
       });
       setTranslatedLinesMap(map);
-    } else if (transSettings.enabled) {
-      // Tự động dịch ngầm nếu đã bật hiển thị bản dịch
+    } else if (transSettings.enabled && transSettings.autoTranslate) {
+      // Tự động dịch ngầm với trình dịch đã được người dùng chỉ định trong Cài Đặt
       let isCancelled = false;
       translateLyrics(
         lyrics,
@@ -96,7 +105,10 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
           album: currentTrack.album,
           trackId: currentTrack.id,
         },
-        transSettings
+        {
+          ...transSettings,
+          provider: transSettings.autoTranslateProvider || transSettings.provider,
+        }
       )
         .then((translated) => {
           if (isCancelled) return;
@@ -114,9 +126,18 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
         isCancelled = true;
       };
     } else {
+      // Mặc định chế độ Thủ Công: Không tự động chạy dịch khi chưa yêu cầu
       setTranslatedLinesMap({});
     }
-  }, [currentTrack?.id, lyrics, transSettings.enabled, transSettings.targetLanguage, transSettings.provider]);
+  }, [
+    currentTrack?.id,
+    lyrics,
+    transSettings.enabled,
+    transSettings.autoTranslate,
+    transSettings.autoTranslateProvider,
+    transSettings.targetLanguage,
+    transSettings.provider,
+  ]);
 
   const audioAnalysis = useMemo(() => analyzeTrackAudio(currentTrack), [currentTrack]);
   const lyricContainerRef = useRef<HTMLDivElement>(null);

@@ -1142,19 +1142,144 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </h3>
                 </div>
 
-                {/* 1. Cấu hình cơ bản */}
+                {/* 1. Chế Độ Dịch Lời Bài Hát (Thủ Công vs Tự Động) */}
+                <div className="border border-white/10 rounded-2xl bg-white/[0.02] p-5 space-y-4 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-apple-pink" />
+                      <span>Chế Độ Dịch Lời Bài Hát</span>
+                    </h4>
+                    <span className="text-[11px] text-neutral-400">
+                      Hiện tại: <strong className="text-apple-pink">{transSettings.autoTranslate ? 'Tự Động Khi Mở' : 'Thủ Công (Mặc định)'}</strong>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Chế độ 1: Thủ công (Mặc định) */}
+                    <button
+                      onClick={() => updateTransSettings({ autoTranslate: false })}
+                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                        !transSettings.autoTranslate
+                          ? 'bg-apple-pink/15 border-apple-pink text-white shadow-lg shadow-apple-pink/10 ring-1 ring-apple-pink/40'
+                          : 'bg-white/[0.02] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Languages className="w-4 h-4 text-apple-pink" />
+                          <span className="text-sm font-bold text-white">Dịch Thủ Công</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-white/10">
+                          Mặc Định
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-300 leading-relaxed">
+                        Chỉ dịch khi bạn bấm nút <strong>"Dịch"</strong> trên giao diện lời bài hát. Tiết kiệm lưu lượng mạng và API tokens.
+                      </p>
+                      {!transSettings.autoTranslate && (
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-apple-pink pt-1">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Đang áp dụng</span>
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Chế độ 2: Tự động dịch khi mở */}
+                    <button
+                      onClick={() => updateTransSettings({ autoTranslate: true, enabled: true })}
+                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                        transSettings.autoTranslate
+                          ? 'bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-500/15 ring-1 ring-purple-500/40'
+                          : 'bg-white/[0.02] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-purple-400" />
+                          <span className="text-sm font-bold text-white">Tự Động Dịch Khi Mở</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          Tự Động
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-300 leading-relaxed">
+                        Tự động nhận diện và dịch toàn bộ lời bài hát sang ngôn ngữ đích ngay khi bạn mở bài hát mới.
+                      </p>
+                      {transSettings.autoTranslate && (
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-purple-400 pt-1">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Đang kích hoạt</span>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Chọn Trình Sẽ Dịch Tự Động (Auto-Translate Provider Engine) */}
+                <div className="border border-white/10 rounded-2xl bg-white/[0.02] p-5 space-y-4 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-apple-pink" />
+                        <span>Chọn Trình Sẽ Dịch Tự Động</span>
+                      </h4>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Trình dịch được chỉ định thực hiện dịch tự động khi mở bài hát
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold text-apple-pink bg-apple-pink/10 px-3 py-1 rounded-full border border-apple-pink/20 uppercase tracking-wider">
+                      {transSettings.autoTranslateProvider || transSettings.provider}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {[
+                      { id: 'google' as const, title: 'Google Dịch (Auto)', desc: 'Miễn phí, tự động & Không cần Key', tag: 'Phổ biến' },
+                      { id: 'gemini' as const, title: 'Google Gemini AI', desc: '1.5 Flash / 2.0 Flash thi vị', tag: 'AI Cảm Xúc' },
+                      { id: 'openai' as const, title: 'OpenAI (ChatGPT)', desc: 'GPT-4o / GPT-4o-mini chuẩn nhịp', tag: 'Chính xác' },
+                      { id: 'openrouter' as const, title: 'OpenRouter', desc: 'Cổng đa mô hình mở thế giới', tag: 'Linh hoạt' },
+                      { id: 'claude' as const, title: 'Anthropic Claude', desc: 'Claude 3.5 / 3.7 Sonnet sâu sắc', tag: 'Văn Phong' },
+                      { id: 'custom' as const, title: 'Custom Endpoint', desc: 'OpenAI-compatible / Ollama riêng', tag: 'Tự Lưu Trữ' },
+                    ].map((engine) => {
+                      const isSelected = (transSettings.autoTranslateProvider || transSettings.provider) === engine.id;
+                      return (
+                        <button
+                          key={engine.id}
+                          onClick={() => updateTransSettings({ autoTranslateProvider: engine.id, provider: engine.id })}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
+                            isSelected
+                              ? 'bg-apple-pink/20 border-apple-pink text-white shadow-md ring-1 ring-apple-pink/40'
+                              : 'bg-white/[0.02] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-xs font-bold text-white">{engine.title}</span>
+                            {isSelected ? (
+                              <Check className="w-3.5 h-3.5 text-apple-pink shrink-0" />
+                            ) : (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/5 text-neutral-400">{engine.tag}</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-neutral-400 leading-snug">{engine.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Cấu hình Ngôn ngữ đích & Hiển thị */}
                 <div className="border border-white/10 rounded-2xl bg-white/[0.02] p-5 space-y-4 shadow-xl">
                   <h4 className="text-sm font-bold text-white flex items-center gap-2">
                     <Globe className="w-4 h-4 text-apple-pink" />
-                    <span>Cấu Hình Dịch Thuật Cơ Bản</span>
+                    <span>Cấu Hình Hiển Thị & Ngôn Ngữ Đích</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Bật/Tắt dịch */}
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    {/* Bật/Tắt hiển thị lời dịch */}
+                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
                       <div>
-                        <span className="text-xs font-bold text-neutral-200">Dịch song ngữ tự động</span>
-                        <p className="text-[11px] text-neutral-400">Hiển thị lời dịch phụ dưới từng câu hát</p>
+                        <span className="text-xs font-bold text-neutral-200">Hiển thị lời dịch song ngữ</span>
+                        <p className="text-[11px] text-neutral-400">Hiện dòng chữ phụ dưới từng câu hát</p>
                       </div>
                       <button
                         onClick={() => updateTransSettings({ enabled: !transSettings.enabled })}
@@ -1171,9 +1296,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </div>
 
                     {/* Ngôn ngữ đích */}
-                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5">
-                      <label className="text-xs font-bold text-neutral-200 flex items-center gap-1.5">
+                    <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5">
+                      <label className="text-xs font-bold text-neutral-200 flex items-center justify-between">
                         <span>Ngôn ngữ đích mặc định</span>
+                        <span className="text-[10px] font-bold text-apple-pink uppercase">{transSettings.targetLanguage}</span>
                       </label>
                       <select
                         value={transSettings.targetLanguage}
@@ -1190,7 +1316,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </div>
                 </div>
 
-                {/* 2. Tùy biến Giao diện Sub-Text Lời Dịch (Apple Music, Spotify, Minimal...) */}
+                {/* 4. Tùy biến Giao diện Sub-Text Lời Dịch (Apple Music, Spotify, Minimal...) */}
                 <div className="border border-white/10 rounded-2xl bg-white/[0.02] p-5 space-y-5 shadow-xl">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
@@ -1381,44 +1507,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         Vì có người bên cạnh, từng khoảnh khắc đều hóa thành khúc ngân nga
                       </p>
                     </div>
-                  </div>
-                </div>
-
-                {/* 2. Chọn Engine Dịch Thuật */}
-                <div className="border border-white/10 rounded-2xl bg-white/[0.02] p-5 space-y-4 shadow-xl">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Bot className="w-4 h-4 text-apple-pink" />
-                      <span>Chọn Engine / Mô Hình Dịch</span>
-                    </h4>
-                    <span className="text-[11px] text-neutral-400">Mặc định: Google Dịch (Miễn phí)</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {[
-                      { id: 'google' as const, title: 'Google Dịch', desc: 'Miễn phí & Nhanh chóng' },
-                      { id: 'gemini' as const, title: 'Google Gemini', desc: '1.5 Flash / Pro, 2.0 Flash' },
-                      { id: 'openai' as const, title: 'OpenAI', desc: 'GPT-4o / GPT-4o-mini' },
-                      { id: 'openrouter' as const, title: 'OpenRouter', desc: 'Cổng đa mô hình mở' },
-                      { id: 'claude' as const, title: 'Anthropic Claude', desc: 'Claude 3.5 Sonnet / Haiku' },
-                      { id: 'custom' as const, title: 'Custom Endpoint', desc: 'OpenAI-compatible / Ollama' },
-                    ].map((engine) => (
-                      <button
-                        key={engine.id}
-                        onClick={() => updateTransSettings({ provider: engine.id })}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                          transSettings.provider === engine.id
-                            ? 'bg-apple-pink/20 border-apple-pink/50 text-white shadow-md shadow-apple-pink/10'
-                            : 'bg-white/[0.02] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xs font-bold text-white">{engine.title}</span>
-                          {transSettings.provider === engine.id && <Check className="w-3.5 h-3.5 text-apple-pink shrink-0" />}
-                        </div>
-                        <span className="text-[10px] text-neutral-400 mt-1">{engine.desc}</span>
-                      </button>
-                    ))}
                   </div>
                 </div>
 
