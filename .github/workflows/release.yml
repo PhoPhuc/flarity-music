@@ -58,12 +58,20 @@ jobs:
 
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
       - name: Install Dependencies
         run: npm ci
 
-      - name: Build Windows Executables
-        run: npm run dist
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Build Tauri App
+        run: npx tauri build
+
+      - name: Package Portable Distribution
+        run: node scripts/package-portable.js
 
       - name: Upload Windows Release Artifacts
         uses: actions/upload-artifact@v4
