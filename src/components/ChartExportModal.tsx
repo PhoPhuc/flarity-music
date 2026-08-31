@@ -5,14 +5,15 @@ import {
   Camera,
   Check,
   Copy,
-  Sparkles,
   Layers,
-  Disc,
+  Music,
+  User,
+  Sparkles,
 } from 'lucide-react';
+import { convertFileSrc } from '../utils/tauriBridge';
 
 export type ChartType = 'both' | 'songs' | 'artists';
 export type ChartLimit = 5 | 10;
-export type ChartTheme = 'apple-pink' | 'cyberpunk' | 'oled';
 
 export interface TopTrackItem {
   songId: string;
@@ -38,6 +39,50 @@ interface ChartExportModalProps {
   timeRangeLabel: string;
 }
 
+// Hàm tải ảnh bất đồng bộ với Promise
+function loadImageAsync(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    if (!src) {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+// Vẽ hình chữ nhật bo góc
+function drawRoundedRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// Format đơn vị phút theo số tự nhiên (ví dụ 45 phút, 120 phút)
+function formatMinutesNatural(seconds: number): string {
+  if (!seconds || seconds <= 0) return '0 phút';
+  const mins = Math.max(1, Math.round(seconds / 60));
+  return `${mins} phút`;
+}
+
 export const ChartExportModal: React.FC<ChartExportModalProps> = ({
   isOpen,
   onClose,
@@ -47,17 +92,9 @@ export const ChartExportModal: React.FC<ChartExportModalProps> = ({
 }) => {
   const [chartType, setChartType] = useState<ChartType>('both');
   const [limit, setLimit] = useState<ChartLimit>(10);
-  const [theme, setTheme] = useState<ChartTheme>('apple-pink');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-
-  // Helper format smart time
-  const formatTimeText = (sec: number) => {
-    if (sec < 60) return sec + 's';
-    if (sec < 3600) return Math.floor(sec / 60) + ' phút';
-    return (sec / 3600).toFixed(1) + ' giờ';
-  };
 
   const renderPosterToCanvas = useCallback(async (): Promise<HTMLCanvasElement | null> => {
     const canvas = document.createElement('canvas');
@@ -67,320 +104,416 @@ export const ChartExportModal: React.FC<ChartExportModalProps> = ({
     const songsToRender = topSongs.slice(0, limit);
     const artistsToRender = topArtists.slice(0, limit);
 
-    // Dynamic sizing based on layout
+    // Kích thước poster chuẩn thiết kế Apple Dark
     const isBoth = chartType === 'both';
-    const width = isBoth ? 1400 : 1000;
-    const headerHeight = 240;
-    const footerHeight = 110;
-    const rowHeight = 72;
-    const contentRows = Math.max(songsToRender.length, artistsToRender.length, limit);
-    const contentHeight = contentRows * rowHeight + 80;
+    const width = isBoth ? 1280 : 860;
+    const headerHeight = 150;
+    const footerHeight = 100;
+    const rowHeight = 64;
+    const contentRows = Math.max(
+      isBoth ? Math.max(songsToRender.length, artistsToRender.length) : (chartType === 'songs' ? songsToRender.length : artistsToRender.length),
+      1
+    );
+    const contentHeight = contentRows * rowHeight + 40;
     const height = headerHeight + contentHeight + footerHeight;
 
-    canvas.width = width;
-    canvas.height = height;
+    // Retina 2x Canvas cho độ nét tối đa
+    const scale = 2;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    ctx.scale(scale, scale);
 
-    // 1. Draw Background
-    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-    if (theme === 'apple-pink') {
-      bgGrad.addColorStop(0, '#15151c');
-      bgGrad.addColorStop(0.5, '#0e0e12');
-      bgGrad.addColorStop(1, '#08080a');
-    } else if (theme === 'cyberpunk') {
-      bgGrad.addColorStop(0, '#120d20');
-      bgGrad.addColorStop(0.5, '#090814');
-      bgGrad.addColorStop(1, '#05040a');
-    } else {
-      bgGrad.addColorStop(0, '#0a0a0c');
-      bgGrad.addColorStop(1, '#000000');
-    }
-    ctx.fillStyle = bgGrad;
+    // 1. NỀN ĐEN HOÀN TOÀN (Pure OLED Black #000000)
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Ambient glowing orbs
-    const drawGlow = (x: number, y: number, r: number, color: string) => {
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, color);
-      g.addColorStop(1, 'transparent');
-      ctx.fillStyle = g;
+    // 2. CHỈ GLOW ĐỎ Ở GÓC (Apple Pink / Red Glow ở góc trên phải & góc dưới trái)
+    const drawCornerGlow = (cx: number, cy: number, radius: number, alpha: number) => {
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      grad.addColorStop(0, `rgba(250, 36, 60, ${alpha})`);
+      grad.addColorStop(0.5, `rgba(250, 36, 60, ${alpha * 0.3})`);
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fill();
     };
 
-    if (theme === 'apple-pink') {
-      drawGlow(width * 0.85, 120, 400, 'rgba(250, 36, 60, 0.22)');
-      drawGlow(width * 0.15, height * 0.7, 450, 'rgba(168, 85, 247, 0.15)');
-    } else if (theme === 'cyberpunk') {
-      drawGlow(width * 0.85, 120, 400, 'rgba(6, 182, 212, 0.25)');
-      drawGlow(width * 0.15, height * 0.7, 450, 'rgba(236, 72, 153, 0.20)');
-    }
+    // Glow góc trên bên phải
+    drawCornerGlow(width, 0, 420, 0.28);
+    // Glow nhẹ góc dưới bên trái
+    drawCornerGlow(0, height, 360, 0.15);
 
-    // Outer border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(12, 12, width - 24, height - 24);
+    // Viền khung mờ tinh tế
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    drawRoundedRectPath(ctx, 16, 16, width - 32, height - 32, 20);
+    ctx.stroke();
 
-    // 3. Load & Draw Logo
-    try {
-      const logoImg = new Image();
-      logoImg.crossOrigin = 'anonymous';
-      await new Promise((resolve) => {
-        logoImg.onload = resolve;
-        logoImg.onerror = resolve;
-        logoImg.src = '/logo.png';
-      });
-      if (logoImg.complete && logoImg.naturalWidth > 0) {
-        ctx.drawImage(logoImg, 60, 50, 72, 72);
-      }
-    } catch {
-      // ignore
-    }
+    // 3. HEADER BẢNG XẾP HẠNG (Font Web chuẩn)
+    const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
-    // Header Titles
+    // Tiêu đề chính
+    ctx.fillStyle = '#FA243C';
+    ctx.font = `800 13px ${fontStack}`;
+    ctx.fillText('FLARITY MUSIC', 48, 62);
+
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 36px -apple-system, BlinkMacSystemFont,  Segoe UI, Roboto, sans-serif';
-    ctx.fillText('FLARITY MUSIC', 150, 85);
+    ctx.font = `900 28px ${fontStack}`;
+    const mainTitle =
+      chartType === 'both'
+        ? `BẢNG XẾP HẠNG TOP ${limit}`
+        : chartType === 'songs'
+        ? `TOP ${limit} BÀI HÁT NGHE NHIỀU NHẤT`
+        : `TOP ${limit} NGHỆ SĨ ĐƯỢC YÊU THÍCH`;
+    ctx.fillText(mainTitle, 48, 98);
 
-    ctx.fillStyle = theme === 'cyberpunk' ? '#06B6D4' : '#FA243C';
-    ctx.font = '700 15px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-    ctx.fillText('BẢNG XẾP HẠNG THỜI GIAN THỰC · TOP ' + limit, 150, 112);
+    // Huy hiệu mốc thời gian (Góc phải header)
+    const timeBadgeText = timeRangeLabel.toUpperCase();
+    ctx.font = `700 12px ${fontStack}`;
+    const badgeW = ctx.measureText(timeBadgeText).width + 28;
+    const badgeX = width - 48 - badgeW;
+    const badgeY = 66;
 
-    // Meta Badge (Right side of header)
-    const badgeText = timeRangeLabel.toUpperCase() + ' · ' + new Date().toLocaleDateString('vi-VN');
-    ctx.font = '700 13px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-    const badgeW = ctx.measureText(badgeText).width + 36;
-    const badgeX = width - 60 - badgeW;
-    const badgeY = 60;
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeW, 36, [18]);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    drawRoundedRectPath(ctx, badgeX, badgeY, badgeW, 30, 15);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.stroke();
 
-    ctx.fillStyle = '#E5E7EB';
-    ctx.fillText(badgeText, badgeX + 18, badgeY + 23);
+    ctx.fillStyle = '#E4E4E7';
+    ctx.fillText(timeBadgeText, badgeX + 14, badgeY + 19);
 
-    // Header Divider
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 2;
+    // Đường kẻ phân cách header
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(60, 150);
-    ctx.lineTo(width - 60, 150);
+    ctx.moveTo(48, 126);
+    ctx.lineTo(width - 48, 126);
     ctx.stroke();
 
-    // 4. Render Table Sections
-    const startY = 195;
+    // Tải trước tất cả hình ảnh bìa bài hát & avatar nghệ sĩ
+    const songImages = await Promise.all(
+      songsToRender.map((s) => (s.picture ? loadImageAsync(convertFileSrc(s.picture)) : Promise.resolve(null)))
+    );
+    const artistImages = await Promise.all(
+      artistsToRender.map((a) => (a.picture ? loadImageAsync(convertFileSrc(a.picture)) : Promise.resolve(null)))
+    );
+
+    // 4. RENDER NỘI DUNG DANH SÁCH
+    const startY = 160;
 
     const drawRankBadge = (x: number, y: number, rank: number) => {
-      let color = '#9CA3AF';
-      let bg = 'rgba(255, 255, 255, 0.06)';
+      let color = '#71717A';
+      let bg = 'rgba(255, 255, 255, 0.04)';
       if (rank === 1) {
         color = '#F59E0B';
-        bg = 'rgba(245, 158, 11, 0.2)';
+        bg = 'rgba(245, 158, 11, 0.18)';
       } else if (rank === 2) {
         color = '#E2E8F0';
-        bg = 'rgba(226, 232, 240, 0.2)';
+        bg = 'rgba(226, 232, 240, 0.16)';
       } else if (rank === 3) {
         color = '#F97316';
-        bg = 'rgba(249, 115, 22, 0.2)';
+        bg = 'rgba(249, 115, 22, 0.18)';
       }
 
       ctx.fillStyle = bg;
-      ctx.beginPath();
-      ctx.roundRect(x, y - 24, 38, 34, [10]);
+      drawRoundedRectPath(ctx, x, y - 20, 32, 28, 8);
       ctx.fill();
 
       ctx.fillStyle = color;
-      ctx.font = '900 16px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
+      ctx.font = `800 13px ${fontStack}`;
       ctx.textAlign = 'center';
-      ctx.fillText('#' + rank, x + 19, y - 1);
+      ctx.fillText(`#${rank}`, x + 16, y - 1);
       ctx.textAlign = 'left';
     };
 
     if (chartType === 'both') {
-      const colWidth = (width - 160) / 2;
+      const colWidth = (width - 136) / 2;
 
-      // Column 1: Top Songs
+      // CỘT 1: TOP BÀI HÁT
       ctx.fillStyle = '#FA243C';
-      ctx.font = '800 20px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-      ctx.fillText('TOP ' + limit + ' BÀI HÁT NGHE NHIỀU NHẤT', 60, startY);
+      ctx.font = `800 15px ${fontStack}`;
+      ctx.fillText(`TOP ${limit} BÀI HÁT`, 48, startY + 10);
 
       songsToRender.forEach((song, idx) => {
-        const rowY = startY + 45 + idx * rowHeight;
-        drawRankBadge(60, rowY, idx + 1);
+        const rowY = startY + 36 + idx * rowHeight;
+        const img = songImages[idx];
 
-        // Title
+        // 1. Rank Badge
+        drawRankBadge(48, rowY, idx + 1);
+
+        // 2. Bìa Bài Hát (Square Rounded Rect 44x44)
+        const coverX = 88;
+        const coverY = rowY - 24;
+        const coverSize = 42;
+
+        ctx.save();
+        drawRoundedRectPath(ctx, coverX, coverY, coverSize, coverSize, 8);
+        ctx.clip();
+        if (img) {
+          ctx.drawImage(img, coverX, coverY, coverSize, coverSize);
+        } else {
+          ctx.fillStyle = '#18181B';
+          ctx.fillRect(coverX, coverY, coverSize, coverSize);
+          ctx.fillStyle = '#FA243C';
+          ctx.font = `700 16px ${fontStack}`;
+          ctx.textAlign = 'center';
+          ctx.fillText('♪', coverX + coverSize / 2, coverY + coverSize / 2 + 5);
+          ctx.textAlign = 'left';
+        }
+        ctx.restore();
+
+        // Viền ảnh bìa
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        drawRoundedRectPath(ctx, coverX, coverY, coverSize, coverSize, 8);
+        ctx.stroke();
+
+        // 3. Tên bài hát & Nghệ sĩ
+        const textX = coverX + coverSize + 12;
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 16px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        const title = song.title.length > 26 ? song.title.slice(0, 24) + '...' : song.title;
-        ctx.fillText(title, 115, rowY - 5);
+        ctx.font = `700 14px ${fontStack}`;
+        const title = song.title.length > 22 ? song.title.slice(0, 20) + '...' : song.title;
+        ctx.fillText(title, textX, rowY - 6);
 
-        // Artist
-        ctx.fillStyle = '#9CA3AF';
-        ctx.font = '500 13px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        const artist = song.artist.length > 30 ? song.artist.slice(0, 28) + '...' : song.artist;
-        ctx.fillText(artist, 115, rowY + 14);
+        ctx.fillStyle = '#A1A1AA';
+        ctx.font = `500 12px ${fontStack}`;
+        const artist = song.artist.length > 24 ? song.artist.slice(0, 22) + '...' : song.artist;
+        ctx.fillText(artist, textX, rowY + 11);
 
-        // Stats
+        // 4. Số liệu: Lượt & Phút theo số tự nhiên
         ctx.textAlign = 'right';
         ctx.fillStyle = '#FA243C';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(song.playCount + ' lượt', 60 + colWidth, rowY - 5);
+        ctx.font = `700 12px ${fontStack}`;
+        ctx.fillText(`${song.playCount} lượt`, 48 + colWidth, rowY - 6);
 
-        ctx.fillStyle = '#6B7280';
-        ctx.font = '500 11px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(formatTimeText(song.totalDuration), 60 + colWidth, rowY + 13);
+        ctx.fillStyle = '#71717A';
+        ctx.font = `500 11px ${fontStack}`;
+        ctx.fillText(formatMinutesNatural(song.totalDuration), 48 + colWidth, rowY + 11);
         ctx.textAlign = 'left';
 
-        // Row underline
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
+        // Đường kẻ dòng mờ
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
         ctx.beginPath();
-        ctx.moveTo(60, rowY + 22);
-        ctx.lineTo(60 + colWidth, rowY + 22);
+        ctx.moveTo(48, rowY + 22);
+        ctx.lineTo(48 + colWidth, rowY + 22);
         ctx.stroke();
       });
 
-      // Column 2: Top Artists
-      const col2X = 60 + colWidth + 40;
-      ctx.fillStyle = '#10B981';
-      ctx.font = '800 20px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-      ctx.fillText('TOP ' + limit + ' NGHỆ SĨ YÊU THÍCH NHẤT', col2X, startY);
+      // CỘT 2: TOP NGHỆ SĨ
+      const col2X = 48 + colWidth + 40;
+      ctx.fillStyle = '#FA243C';
+      ctx.font = `800 15px ${fontStack}`;
+      ctx.fillText(`TOP ${limit} NGHỆ SĨ`, col2X, startY + 10);
 
       artistsToRender.forEach((artist, idx) => {
-        const rowY = startY + 45 + idx * rowHeight;
+        const rowY = startY + 36 + idx * rowHeight;
+        const img = artistImages[idx];
+
+        // 1. Rank Badge
         drawRankBadge(col2X, rowY, idx + 1);
 
-        // Artist Name
+        // 2. Bìa / Avatar Nghệ Sĩ (Hình Tròn 42x42)
+        const avatarX = col2X + 40;
+        const avatarY = rowY - 24;
+        const avatarSize = 42;
+        const radius = avatarSize / 2;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avatarX + radius, avatarY + radius, radius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+
+        if (img) {
+          ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+        } else {
+          ctx.fillStyle = '#18181B';
+          ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+          ctx.fillStyle = '#FA243C';
+          ctx.font = `800 16px ${fontStack}`;
+          ctx.textAlign = 'center';
+          ctx.fillText(artist.artist.charAt(0).toUpperCase(), avatarX + radius, avatarY + radius + 5);
+          ctx.textAlign = 'left';
+        }
+        ctx.restore();
+
+        // Viền tròn avatar
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(avatarX + radius, avatarY + radius, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 3. Tên Nghệ Sĩ
+        const textX = avatarX + avatarSize + 12;
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 17px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        const name = artist.artist.length > 26 ? artist.artist.slice(0, 24) + '...' : artist.artist;
-        ctx.fillText(name, col2X + 55, rowY - 5);
+        ctx.font = `700 14px ${fontStack}`;
+        const name = artist.artist.length > 22 ? artist.artist.slice(0, 20) + '...' : artist.artist;
+        ctx.fillText(name, textX, rowY - 6);
 
-        // Subtext
-        ctx.fillStyle = '#9CA3AF';
-        ctx.font = '500 13px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText('Nghệ sĩ tiêu biểu', col2X + 55, rowY + 14);
+        ctx.fillStyle = '#A1A1AA';
+        ctx.font = `500 12px ${fontStack}`;
+        ctx.fillText('Nghệ sĩ yêu thích', textX, rowY + 11);
 
-        // Stats
+        // 4. Số liệu: Lượt nghe & Phút theo số tự nhiên
         ctx.textAlign = 'right';
-        ctx.fillStyle = '#10B981';
-        ctx.font = '800 13px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(artist.playCount + ' lượt nghe', col2X + colWidth, rowY - 5);
+        ctx.fillStyle = '#FA243C';
+        ctx.font = `700 12px ${fontStack}`;
+        ctx.fillText(`${artist.playCount} lượt nghe`, col2X + colWidth, rowY - 6);
 
-        ctx.fillStyle = '#6B7280';
-        ctx.font = '500 11px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(formatTimeText(artist.totalDuration), col2X + colWidth, rowY + 13);
+        ctx.fillStyle = '#71717A';
+        ctx.font = `500 11px ${fontStack}`;
+        ctx.fillText(formatMinutesNatural(artist.totalDuration), col2X + colWidth, rowY + 11);
         ctx.textAlign = 'left';
 
-        // Row underline
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
+        // Đường kẻ dòng mờ
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
         ctx.beginPath();
         ctx.moveTo(col2X, rowY + 22);
         ctx.lineTo(col2X + colWidth, rowY + 22);
         ctx.stroke();
       });
     } else if (chartType === 'songs') {
-      const colWidth = width - 120;
-      ctx.fillStyle = '#FA243C';
-      ctx.font = '800 22px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-      ctx.fillText('TOP ' + limit + ' BÀI HÁT NGHE NHIỀU NHẤT', 60, startY);
+      // CHỈ BÀI HÁT (FULL WIDTH)
+      const colWidth = width - 96;
 
       songsToRender.forEach((song, idx) => {
-        const rowY = startY + 50 + idx * rowHeight;
-        drawRankBadge(60, rowY, idx + 1);
+        const rowY = startY + 20 + idx * rowHeight;
+        const img = songImages[idx];
 
+        drawRankBadge(48, rowY, idx + 1);
+
+        const coverX = 92;
+        const coverY = rowY - 24;
+        const coverSize = 44;
+
+        ctx.save();
+        drawRoundedRectPath(ctx, coverX, coverY, coverSize, coverSize, 8);
+        ctx.clip();
+        if (img) {
+          ctx.drawImage(img, coverX, coverY, coverSize, coverSize);
+        } else {
+          ctx.fillStyle = '#18181B';
+          ctx.fillRect(coverX, coverY, coverSize, coverSize);
+          ctx.fillStyle = '#FA243C';
+          ctx.font = `700 16px ${fontStack}`;
+          ctx.textAlign = 'center';
+          ctx.fillText('♪', coverX + coverSize / 2, coverY + coverSize / 2 + 5);
+          ctx.textAlign = 'left';
+        }
+        ctx.restore();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        drawRoundedRectPath(ctx, coverX, coverY, coverSize, coverSize, 8);
+        ctx.stroke();
+
+        const textX = coverX + coverSize + 14;
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 18px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(song.title, 120, rowY - 5);
+        ctx.font = `700 15px ${fontStack}`;
+        ctx.fillText(song.title, textX, rowY - 6);
 
-        ctx.fillStyle = '#9CA3AF';
-        ctx.font = '500 14px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(song.artist, 120, rowY + 15);
+        ctx.fillStyle = '#A1A1AA';
+        ctx.font = `500 13px ${fontStack}`;
+        ctx.fillText(song.artist, textX, rowY + 12);
 
         ctx.textAlign = 'right';
         ctx.fillStyle = '#FA243C';
-        ctx.font = '800 15px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(song.playCount + ' lượt phát', 60 + colWidth, rowY - 5);
+        ctx.font = `700 13px ${fontStack}`;
+        ctx.fillText(`${song.playCount} lượt phát`, 48 + colWidth, rowY - 6);
 
-        ctx.fillStyle = '#9CA3AF';
-        ctx.font = '500 12px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText('Tổng thời lượng: ' + formatTimeText(song.totalDuration), 60 + colWidth, rowY + 14);
+        ctx.fillStyle = '#71717A';
+        ctx.font = `500 12px ${fontStack}`;
+        ctx.fillText(formatMinutesNatural(song.totalDuration), 48 + colWidth, rowY + 12);
         ctx.textAlign = 'left';
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
         ctx.beginPath();
-        ctx.moveTo(60, rowY + 24);
-        ctx.lineTo(60 + colWidth, rowY + 24);
+        ctx.moveTo(48, rowY + 24);
+        ctx.lineTo(48 + colWidth, rowY + 24);
         ctx.stroke();
       });
     } else {
-      // Only Artists
-      const colWidth = width - 120;
-      ctx.fillStyle = '#10B981';
-      ctx.font = '800 22px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-      ctx.fillText('TOP ' + limit + ' NGHỆ SĨ ĐƯỢC YÊU THÍCH NHẤT', 60, startY);
+      // CHỈ NGHỆ SĨ (FULL WIDTH)
+      const colWidth = width - 96;
 
       artistsToRender.forEach((artist, idx) => {
-        const rowY = startY + 50 + idx * rowHeight;
-        drawRankBadge(60, rowY, idx + 1);
+        const rowY = startY + 20 + idx * rowHeight;
+        const img = artistImages[idx];
 
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 19px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(artist.artist, 120, rowY - 5);
+        drawRankBadge(48, rowY, idx + 1);
 
-        ctx.fillStyle = '#9CA3AF';
-        ctx.font = '500 14px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText('Nghệ sĩ xuất sắc trong thư viện', 120, rowY + 15);
+        const avatarX = 92;
+        const avatarY = rowY - 24;
+        const avatarSize = 44;
+        const radius = avatarSize / 2;
 
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#10B981';
-        ctx.font = '800 15px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText(artist.playCount + ' lượt nghe', 60 + colWidth, rowY - 5);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avatarX + radius, avatarY + radius, radius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        if (img) {
+          ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+        } else {
+          ctx.fillStyle = '#18181B';
+          ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+          ctx.fillStyle = '#FA243C';
+          ctx.font = `800 18px ${fontStack}`;
+          ctx.textAlign = 'center';
+          ctx.fillText(artist.artist.charAt(0).toUpperCase(), avatarX + radius, avatarY + radius + 6);
+          ctx.textAlign = 'left';
+        }
+        ctx.restore();
 
-        ctx.fillStyle = '#9CA3AF';
-        ctx.font = '500 12px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-        ctx.fillText('Tổng thời gian: ' + formatTimeText(artist.totalDuration), 60 + colWidth, rowY + 14);
-        ctx.textAlign = 'left';
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(60, rowY + 24);
-        ctx.lineTo(60 + colWidth, rowY + 24);
+        ctx.arc(avatarX + radius, avatarY + radius, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        const textX = avatarX + avatarSize + 14;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `700 15px ${fontStack}`;
+        ctx.fillText(artist.artist, textX, rowY - 6);
+
+        ctx.fillStyle = '#A1A1AA';
+        ctx.font = `500 13px ${fontStack}`;
+        ctx.fillText('Nghệ sĩ yêu thích trong thư viện', textX, rowY + 12);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#FA243C';
+        ctx.font = `700 13px ${fontStack}`;
+        ctx.fillText(`${artist.playCount} lượt nghe`, 48 + colWidth, rowY - 6);
+
+        ctx.fillStyle = '#71717A';
+        ctx.font = `500 12px ${fontStack}`;
+        ctx.fillText(formatMinutesNatural(artist.totalDuration), 48 + colWidth, rowY + 12);
+        ctx.textAlign = 'left';
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.beginPath();
+        ctx.moveTo(48, rowY + 24);
+        ctx.lineTo(48 + colWidth, rowY + 24);
         ctx.stroke();
       });
     }
 
-    // 5. Footer Bar with Flarity Branding & Watermark
-    const footerY = height - 55;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(60, footerY - 20);
-    ctx.lineTo(width - 60, footerY - 20);
-    ctx.stroke();
-
-    ctx.fillStyle = '#9CA3AF';
-    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-    ctx.fillText('Tạo tự động từ Flarity Music · Trình phát nhạc Audiophile Hi-Res Lossless', 60, footerY + 10);
-
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#6B7280';
-    ctx.font = '500 12px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
-    ctx.fillText('github.com/PhoPhuc/flarity-music', width - 60, footerY + 10);
-    ctx.textAlign = 'left';
+    // 5. GÓC DƯỚI CÙNG: CHỈ 1 LOGO FLARITY (Không ghi thêm bất kỳ thông tin nào)
+    const logoImg = await loadImageAsync('/logo.png');
+    if (logoImg) {
+      const logoSize = 36;
+      const logoX = width - 48 - logoSize;
+      const logoY = height - 36 - logoSize;
+      ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+    }
 
     return canvas;
-  }, [chartType, limit, theme, topSongs, topArtists, timeRangeLabel]);
+  }, [chartType, limit, topSongs, topArtists, timeRangeLabel]);
 
-  // Update preview image
+  // Cập nhật xem trước ảnh tức thì
   useEffect(() => {
     if (!isOpen) return;
     let isCancelled = false;
@@ -401,7 +534,7 @@ export const ChartExportModal: React.FC<ChartExportModalProps> = ({
       if (!canvas) return;
       const dataUrl = canvas.toDataURL('image/png');
       const a = document.createElement('a');
-      const filename = 'flarity-chart-' + chartType + '-top' + limit + '-' + Date.now() + '.png';
+      const filename = `flarity-chart-${chartType}-top${limit}-${Date.now()}.png`;
       a.href = dataUrl;
       a.download = filename;
       document.body.appendChild(a);
@@ -443,171 +576,148 @@ export const ChartExportModal: React.FC<ChartExportModalProps> = ({
       {/* Main Dialog */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative z-10 w-full max-w-4xl max-h-[90vh] bg-[#141417]/95 border border-white/15 rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+        className="relative z-10 w-full max-w-4xl max-h-[90vh] bg-[#0c0c0e] border border-white/15 rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-apple-pink/20 border border-apple-pink/40 flex items-center justify-center text-apple-pink shadow-md">
+            <div className="p-2 rounded-xl bg-apple-pink/20 text-apple-pink border border-apple-pink/30">
               <Camera className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                <span>Xuất Ảnh Bảng Xếp Hạng</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-apple-pink text-white">
-                  Flarity Poster
-                </span>
+              <h3 className="text-base font-extrabold text-white tracking-tight">
+                Xuất Ảnh Bảng Xếp Hạng
               </h3>
-              <p className="text-[11px] text-neutral-400 font-medium">
-                Tạo poster đồ họa chất lượng cao kèm logo Flarity để chia sẻ lên mạng xã hội
+              <p className="text-xs text-neutral-400">
+                Ảnh poster OLED sắc nét kèm bìa bài hát & nghệ sĩ
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all cursor-pointer"
-            title="Đóng"
+            className="p-2 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body: 2 Columns (Controls on Left, Live Preview on Right) */}
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Controls Settings (5 cols) */}
-          <div className="lg:col-span-5 space-y-5">
-            {/* 1. Chọn Bảng Xếp Hạng */}
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Controls Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+            {/* Lựa chọn nội dung hiển thị */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
+              <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-apple-pink" />
-                <span>Nội Dung Bảng Xếp Hạng</span>
+                <span>Nội dung bảng xếp hạng</span>
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  { id: 'both', label: 'Cả Hai' },
-                  { id: 'songs', label: 'Bài Hát' },
-                  { id: 'artists', label: 'Nghệ Sĩ' },
-                ].map((item) => (
+                  { id: 'both' as const, label: 'Cả Hai' },
+                  { id: 'songs' as const, label: 'Bài Hát' },
+                  { id: 'artists' as const, label: 'Nghệ Sĩ' },
+                ].map((t) => (
                   <button
-                    key={item.id}
-                    onClick={() => setChartType(item.id as ChartType)}
-                    className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      chartType === item.id
-                        ? 'bg-apple-pink/20 border-apple-pink text-white shadow-md ring-1 ring-apple-pink/40'
-                        : 'bg-white/5 border-white/10 text-neutral-400 hover:text-white hover:bg-white/10'
+                    key={t.id}
+                    onClick={() => setChartType(t.id)}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                      chartType === t.id
+                        ? 'bg-apple-pink text-white shadow-lg shadow-apple-pink/20'
+                        : 'bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    {item.label}
+                    {t.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 2. Số Lượng Hiển Thị */}
+            {/* Số lượng bài / nghệ sĩ */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                <span>Số Lượng Hiển Thị</span>
+              <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-apple-pink" />
+                <span>Số lượng hiển thị</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {[
-                  { id: 5, label: 'Top 5 Tiêu Biểu' },
-                  { id: 10, label: 'Top 10 Đầy Đủ' },
-                ].map((item) => (
+                  { id: 10 as const, label: 'Top 10' },
+                  { id: 5 as const, label: 'Top 5' },
+                ].map((l) => (
                   <button
-                    key={item.id}
-                    onClick={() => setLimit(item.id as ChartLimit)}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      limit === item.id
-                        ? 'bg-purple-600/20 border-purple-500 text-white shadow-md ring-1 ring-purple-500/40'
-                        : 'bg-white/5 border-white/10 text-neutral-400 hover:text-white hover:bg-white/10'
+                    key={l.id}
+                    onClick={() => setLimit(l.id)}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                      limit === l.id
+                        ? 'bg-apple-pink text-white shadow-lg shadow-apple-pink/20'
+                        : 'bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    {item.label}
+                    {l.label}
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* 3. Chủ Đề Màu Sắc */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
-                <Disc className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Chủ Đề Gradient Poster</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: 'apple-pink', label: 'Apple Pink' },
-                  { id: 'cyberpunk', label: 'Cyber Neon' },
-                  { id: 'oled', label: 'Pure OLED' },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setTheme(item.id as ChartTheme)}
-                    className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      theme === item.id
-                        ? 'bg-white/20 border-white text-white shadow-md'
-                        : 'bg-white/5 border-white/10 text-neutral-400 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Info summary */}
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-1.5 text-xs text-neutral-300 leading-relaxed">
-              <p className="font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Đặc điểm ảnh xuất:</span>
-              </p>
-              <p>• Độ phân giải cao (High-Resolution PNG) sắc nét.</p>
-              <p>• Tự động nhúng logo thương hiệu Flarity Music & mốc thời gian.</p>
-              <p>• Tỉ lệ chuẩn poster đăng Facebook, Instagram, Discord.</p>
             </div>
           </div>
 
-          {/* Live Preview Area (7 cols) */}
-          <div className="lg:col-span-7 flex flex-col items-center justify-center p-4 rounded-2xl bg-black/50 border border-white/10 min-h-[360px] overflow-hidden relative group">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Live Chart Preview"
-                className="w-full max-h-[460px] object-contain rounded-xl shadow-2xl border border-white/15"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-neutral-500 space-y-2">
-                <Sparkles className="w-8 h-8 text-apple-pink animate-spin" />
-                <p className="text-xs">Đang vẽ đồ họa bảng xếp hạng...</p>
-              </div>
-            )}
+          {/* Live Preview Box */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-neutral-400 font-medium px-1">
+              <span>Xem trước ảnh chụp thực tế (Tỷ lệ thực):</span>
+              <span className="text-[11px] text-apple-pink font-bold">Nền Đen OLED · Glow Đỏ · Logo Flarity</span>
+            </div>
+
+            <div className="w-full bg-black/90 border border-white/10 rounded-2xl p-4 flex items-center justify-center overflow-hidden min-h-[300px] max-h-[460px]">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Chart Preview"
+                  className="max-h-[420px] w-auto object-contain rounded-xl shadow-2xl border border-white/10 animate-in fade-in duration-300"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center space-y-2 text-neutral-500">
+                  <div className="w-6 h-6 border-2 border-apple-pink/30 border-t-apple-pink rounded-full animate-spin" />
+                  <span className="text-xs">Đang dựng poster...</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-white/10 bg-white/[0.02] flex items-center justify-between">
-          <span className="text-xs text-neutral-400 hidden sm:inline">
-            Khung thời gian: <strong className="text-white">{timeRangeLabel}</strong>
-          </span>
+        <div className="px-6 py-4 border-t border-white/10 bg-white/[0.02] flex items-center justify-between gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+          >
+            Đóng
+          </button>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-3">
             <button
               onClick={handleCopyImage}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-md"
+              disabled={!previewUrl}
+              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
             >
-              {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{isCopied ? 'Đã sao chép!' : 'Sao chép ảnh'}</span>
+              {isCopied ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span className="text-emerald-400">Đã Sao Chép!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  <span>Sao Chép Ảnh</span>
+                </>
+              )}
             </button>
 
             <button
               onClick={handleDownloadImage}
-              disabled={isGenerating}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-apple-pink to-rose-600 hover:brightness-110 text-white shadow-lg shadow-apple-pink/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+              disabled={isGenerating || !previewUrl}
+              className="px-5 py-2.5 rounded-xl bg-apple-pink hover:bg-apple-pinkHover text-white font-bold text-xs shadow-lg shadow-apple-pink/25 flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
-              <span>{isGenerating ? 'Đang xuất file...' : 'Tải Ảnh PNG Về Máy'}</span>
+              <span>{isGenerating ? 'Đang xuất...' : 'Tải Ảnh Xuống'}</span>
             </button>
           </div>
         </div>
