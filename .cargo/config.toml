@@ -1,0 +1,16 @@
+[build]
+target = "x86_64-pc-windows-gnu"
+
+[target.x86_64-pc-windows-gnu]
+linker = "C:\\Users\\Nguyen Trong Phuc\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64\\bin\\clang.exe"
+ar = "C:\\Users\\Nguyen Trong Phuc\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64\\bin\\llvm-ar.exe"
+rustflags = [
+  "-C", "link-arg=--target=x86_64-w64-mingw32",
+  "-C", "link-arg=-fuse-ld=lld",
+]
+
+[target.aarch64-linux-android]
+linker = "C:\\android_sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\aarch64-linux-android24-clang.cmd"
+
+[env]
+LIBRARY_PATH = "C:\\Users\\Nguyen Trong Phuc\\.msvc_libs"

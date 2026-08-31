@@ -1,0 +1,44 @@
+{
+  "name": "musicccc",
+  "private": true,
+  "version": "1.1.2",
+  "description": "Flarity Desktop Music Player App",
+  "author": "Flarity",
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env PATH=\"C:\\Users\\Nguyen Trong Phuc\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64\\bin;%PATH%\" tauri dev",
+    "dev:frontend": "vite",
+    "build": "tsc && vite build",
+    "tauri": "tauri",
+    "tauri:build": "cross-env PATH=\"C:\\Users\\Nguyen Trong Phuc\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64\\bin;%PATH%\" tauri build",
+    "package:portable": "node scripts/package-portable.js",
+    "dist": "npm run tauri:build && npm run package:portable",
+    "build:macos": "npm run build && npx tauri build --target universal-apple-darwin",
+    "build:macos:silicon": "npm run build && npx tauri build --target aarch64-apple-darwin",
+    "build:macos:intel": "npm run build && npx tauri build --target x86_64-apple-darwin",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-virtual": "^3.14.9",
+    "@tauri-apps/api": "^2.3.0",
+    "lucide-react": "^1.28.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tauri-apps/cli": "^2.3.0",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "autoprefixer": "^10.5.4",
+    "cross-env": "^10.1.0",
+    "oxlint": "^1.75.0",
+    "postcss": "^8.5.25",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0"
+  }
+}

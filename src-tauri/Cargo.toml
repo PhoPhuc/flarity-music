@@ -1,0 +1,36 @@
+[package]
+name = "flarity-music"
+version = "1.1.2"
+description = "Flarity Desktop Music Player App"
+authors = ["Flarity"]
+edition = "2021"
+
+[lib]
+name = "flarity_music_lib"
+crate-type = ["staticlib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.1.1", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2.2.0"
+tauri-plugin-opener = "2.2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.32", features = ["bundled"] }
+lofty = "0.22"
+walkdir = "2.5"
+base64 = "0.22"
+chrono = "0.4"
+url = "2.5"
+tokio = { version = "1", features = ["sync", "time"] }
+ureq = { version = "2.9", default-features = false, features = ["tls", "gzip"] }
+trash = "5.2"
+open = "5.3"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+strip = true
+
