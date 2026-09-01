@@ -4,13 +4,13 @@
 
 **Desktop music player built for sound quality, speed, and offline freedom.**
 
-[![Release](https://img.shields.io/badge/Release-v1.1.4-FA243C?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.4)
+[![Release](https://img.shields.io/badge/Release-v1.1.5-FA243C?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.5)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-06B6D4?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases)
 [![Rust](https://img.shields.io/badge/Backend-Rust%20Tauri%20v2-orange?style=for-the-badge&logo=rust)](https://tauri.app)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%208-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-[**Download**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.4) · [**Features**](#features) · [**Benchmarks**](#benchmarks) · [**Build from Source**](#build-from-source)
+[**Download**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.5) · [**Features**](#features) · [**Benchmarks**](#benchmarks) · [**Build from Source**](#build-from-source)
 
 </div>
 
@@ -91,14 +91,14 @@ Measured on the same Windows machine, playing the same track, after 5 minutes of
 
 ## Downloads
 
-Latest release: [**v1.1.4**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.4)
+Latest release: [**v1.1.5**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.5)
 
 ### Windows (x64)
 | File | Description |
 |---|---|
-| [`Flarity-Music-1.1.4-x64-setup.exe`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.4/Flarity-Music-1.1.4-x64-setup.exe) | Installer (NSIS) |
-| [`Flarity-Music-1.1.4-portable-x64.zip`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.4/Flarity-Music-1.1.4-portable-x64.zip) | Portable ZIP — extract and run |
-| [`Flarity-Music-1.1.4-x64.msi`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.4/Flarity-Music-1.1.4-x64.msi) | MSI installer |
+| [`Flarity-Music-1.1.5-x64-setup.exe`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.5/Flarity-Music-1.1.5-x64-setup.exe) | Installer (NSIS) |
+| [`Flarity-Music-1.1.5-portable-x64.zip`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.5/Flarity-Music-1.1.5-portable-x64.zip) | Portable ZIP — extract and run |
+| [`Flarity-Music-1.1.5-x64.msi`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.5/Flarity-Music-1.1.5-x64.msi) | MSI installer |
 
 ### macOS (Universal — Apple Silicon & Intel)
 Universal `.dmg` available via [GitHub Actions](https://github.com/PhoPhuc/flarity-music/actions) or build from source.

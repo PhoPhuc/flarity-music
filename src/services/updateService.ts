@@ -1,4 +1,4 @@
-export const CURRENT_APP_VERSION = '1.1.4';
+export const CURRENT_APP_VERSION = '1.1.5';
 export const GITHUB_REPO_OWNER = 'PhoPhuc';
 export const GITHUB_REPO_NAME = 'flarity-music';
 export const GITHUB_API_LATEST_RELEASE = 'https://api.github.com/repos/' + GITHUB_REPO_OWNER + '/' + GITHUB_REPO_NAME + '/releases/latest';
