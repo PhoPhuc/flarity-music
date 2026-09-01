@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -33,7 +31,7 @@ jobs:
       - name: Build macOS Universal DMG & App
         run: |
           npm run build
-          npx tauri build --target universal-apple-darwin
+          npx tauri build --target universal-apple-darwin --config '{"build":{"beforeBuildCommand":""}}'
 
       - name: Upload macOS Release Artifacts
         uses: actions/upload-artifact@v4
@@ -68,7 +66,7 @@ jobs:
         run: npm run build
 
       - name: Build Tauri App
-        run: npx tauri build
+        run: npx tauri build --config '{"build":{"beforeBuildCommand":""}}'
 
       - name: Package Portable Distribution
         run: node scripts/package-portable.js
@@ -78,4 +76,3 @@ jobs:
         with:
           name: Flarity-Music-Windows-x64
           path: release/*
-
