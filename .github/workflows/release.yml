@@ -1,78 +1,12 @@
 name: Release & Build Cross-Platform (Windows & macOS)
 
+# Disabled: builds are done locally and uploaded via `gh release create`
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
-  build-macos:
-    name: Build macOS Universal (.dmg & .app)
-    runs-on: macos-latest
+  placeholder:
+    name: Manual trigger only
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Setup Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build macOS Universal DMG & App
-        run: |
-          npm run build
-          npx tauri build --target universal-apple-darwin --config '{"build":{"beforeBuildCommand":""}}'
-
-      - name: Upload macOS Release Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Flarity-Music-macOS-Universal
-          path: |
-            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
-
-  build-windows:
-    name: Build Windows (Setup.exe & MSI & Portable)
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Setup Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build Frontend
-        run: npm run build
-
-      - name: Build Tauri App
-        run: npx tauri build --config '{"build":{"beforeBuildCommand":""}}'
-
-      - name: Package Portable Distribution
-        run: node scripts/package-portable.js
-
-      - name: Upload Windows Release Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Flarity-Music-Windows-x64
-          path: release/*
+      - run: echo "This workflow is currently disabled. Builds are done locally."
