@@ -159,12 +159,10 @@ const MainContent: React.FC = () => {
 
   const handleSelectAlbum = (album: Album) => {
     setSelectedAlbum(album);
-    setViewMode('album-detail');
   };
 
   const handleSelectArtist = (artistName: string) => {
     setSelectedArtist(artistName);
-    setViewMode('artist-detail');
   };
 
   const handleTrackContextMenu = (e: React.MouseEvent, track: Track) => {
@@ -193,30 +191,42 @@ const MainContent: React.FC = () => {
             <HomeView />
           ) : viewMode === 'discovery' ? (
             <MusicDiscoveryView />
-          ) : viewMode === 'album-detail' && selectedAlbum ? (
-            <AlbumDetail />
-          ) : viewMode === 'artist-detail' && selectedArtist ? (
-            (() => {
-              const artistTracks = tracks.filter(t => isTrackByArtist(t, selectedArtist));
-              const avatar = getRandomArtistCover(artistTracks);
-              return (
-                <>
-                  <CollectionHeader
-                    kind="Nghệ sĩ"
-                    title={selectedArtist}
-                    subtitle={`${artistTracks.length} bài hát trong thư viện (Bao gồm cả bài hát kết hợp & Feat)`}
-                    tracks={artistTracks}
-                    cover={avatar ? convertFileSrc(avatar) : undefined}
-                    artist
-                  />
-                  <TrackList
-                    tracks={artistTracks}
-                    onOpenMvForTrack={(track) => openMv(track)}
-                    onContextMenu={handleTrackContextMenu}
-                  />
-                </>
-              );
-            })()
+          ) : viewMode === 'album-detail' ? (
+            selectedAlbum ? (
+              <AlbumDetail />
+            ) : (
+              <div className="p-8 text-center text-neutral-400">
+                <p className="text-sm">Chưa chọn album. Vui lòng chọn album từ danh sách.</p>
+              </div>
+            )
+          ) : viewMode === 'artist-detail' ? (
+            selectedArtist ? (
+              (() => {
+                const artistTracks = tracks.filter(t => isTrackByArtist(t, selectedArtist));
+                const avatar = getRandomArtistCover(artistTracks);
+                return (
+                  <>
+                    <CollectionHeader
+                      kind="Nghệ sĩ"
+                      title={selectedArtist}
+                      subtitle={`${artistTracks.length} bài hát trong thư viện (Bao gồm cả bài hát kết hợp & Feat)`}
+                      tracks={artistTracks}
+                      cover={avatar ? convertFileSrc(avatar) : undefined}
+                      artist
+                    />
+                    <TrackList
+                      tracks={artistTracks}
+                      onOpenMvForTrack={(track) => openMv(track)}
+                      onContextMenu={handleTrackContextMenu}
+                    />
+                  </>
+                );
+              })()
+            ) : (
+              <div className="p-8 text-center text-neutral-400">
+                <p className="text-sm">Chưa chọn nghệ sĩ. Vui lòng chọn nghệ sĩ từ danh sách.</p>
+              </div>
+            )
           ) : viewMode === 'library-albums' ? (
             <div className="space-y-4">
               <h1 className="text-3xl font-extrabold text-white tracking-tight p-6 pb-0">Albums</h1>
@@ -303,12 +313,20 @@ const MainContent: React.FC = () => {
             </div>
           ) : viewMode === 'analytics' ? (
             <AnalyticsView />
-          ) : viewMode === 'playlist-detail' && selectedPlaylist ? (
-            <>
-              <CollectionHeader kind="Playlist" title={selectedPlaylist.name} subtitle="Playlist của bạn" tracks={tracks.filter(t => selectedPlaylist.trackIds.includes(t.id))} cover={selectedPlaylist.coverArt} />
-              <TrackList tracks={tracks.filter(t => selectedPlaylist.trackIds.includes(t.id))} onOpenMvForTrack={(track) => openMv(track)} onContextMenu={handleTrackContextMenu} />
-            </>
-          ) : null}
+          ) : viewMode === 'playlist-detail' ? (
+            selectedPlaylist ? (
+              <>
+                <CollectionHeader kind="Playlist" title={selectedPlaylist.name} subtitle="Playlist của bạn" tracks={tracks.filter(t => selectedPlaylist.trackIds.includes(t.id))} cover={selectedPlaylist.coverArt} />
+                <TrackList tracks={tracks.filter(t => selectedPlaylist.trackIds.includes(t.id))} onOpenMvForTrack={(track) => openMv(track)} onContextMenu={handleTrackContextMenu} />
+              </>
+            ) : (
+              <div className="p-8 text-center text-neutral-400">
+                <p className="text-sm">Chưa chọn playlist.</p>
+              </div>
+            )
+          ) : (
+            <HomeView />
+          )}
         </Suspense>
           </div>
         </div>

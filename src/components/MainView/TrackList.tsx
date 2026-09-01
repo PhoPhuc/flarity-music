@@ -239,7 +239,7 @@ const TrackRow: React.FC<TrackRowProps> = React.memo(({
   playTrack,
   setLyricsOpen,
 }) => {
-  const { newTrackIds, updatedTrackIds } = usePlayer();
+  const { newTrackIds, updatedTrackIds, setSelectedArtist, setViewMode } = usePlayer();
   const isNew = newTrackIds.has(track.id);
   const isUpdated = updatedTrackIds.has(track.id);
 
@@ -314,7 +314,19 @@ const TrackRow: React.FC<TrackRowProps> = React.memo(({
               </span>
             )}
           </div>
-          <span className="text-xs text-neutral-400 truncate">{track.artist}</span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              if (track.artist) {
+                setSelectedArtist(track.artist);
+                setViewMode('artist-detail');
+              }
+            }}
+            className="text-xs text-neutral-400 truncate hover:text-apple-pink hover:underline cursor-pointer transition-colors w-fit"
+            title={`Xem nghệ sĩ ${track.artist}`}
+          >
+            {track.artist}
+          </span>
         </div>
       </div>
 

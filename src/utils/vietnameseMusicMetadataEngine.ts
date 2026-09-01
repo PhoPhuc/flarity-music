@@ -380,6 +380,19 @@ export function parseArtistsStructured(
       }
     }
   }
+  if (rawArtistStr) {
+    const featMatches = Array.from(rawArtistStr.matchAll(FEAT_ARTIST_REGEX));
+    for (const m of featMatches) {
+      if (m[1]) {
+        const parts = m[1].split(ARTIST_SEPARATORS_REGEX);
+        for (const p of parts) {
+          if (!producerSet.has(p.trim())) {
+            processAndAdd(p, featuredSet);
+          }
+        }
+      }
+    }
+  }
 
   // 3. Clean rawArtistStr from feat / prod and split for primary artists
   if (rawArtistStr && rawArtistStr.trim()) {
@@ -485,31 +498,62 @@ export function detectVietnameseShow(
 }
 
 /**
- * Helper to determine if a string candidate is likely an Artist name vs Song Title
+ * Đánh giá điểm số chuyên sâu để xác định chuỗi là Nghệ Sĩ (Artist) hay Tiêu Đề Bài Hát (Title)
  */
-function isLikelyArtistString(str: string): boolean {
-  if (!str) return false;
+export function scoreArtistVsTitle(str: string): { artistScore: number; titleScore: number } {
+  if (!str || !str.trim()) return { artistScore: 0, titleScore: 0 };
   const s = str.trim();
-  // Check presence of artist connectors
-  if (/\b(?:feat\.?|ft\.?|featuring|with|prod\.?\s*by|prod\.?|beat\s*by|produced\s*by)\b/i.test(s)) {
-    return true;
-  }
-  if (/\s+(?:x|X|vs\.?|vs|and|và)\s+/i.test(s)) {
-    return true;
-  }
-  if (/[,;&+]/.test(s)) {
-    return true;
-  }
-  // Check known artists
   const lower = s.toLowerCase();
+  let artistScore = 0;
+  let titleScore = 0;
+
+  // 1. Phân tích mẫu ngoặc Feat: "Tên Bài Hát (feat. Ca sĩ khách)"
+  // Sự hiện diện của (feat. ...) hay (ft. ...) trong ngoặc là đặc trưng của Title có kèm khách mời
+  const hasFeatInBracket = /[\(\[\{]\s*(?:feat\.?|ft\.?|featuring|with|prod\.?)\s+[^()\[\]{}]+[\)\]\}]/i.test(s);
+  if (hasFeatInBracket) {
+    titleScore += 50;
+  }
+
+  // 2. Danh mục nghệ sĩ phổ biến
   const KNOWN_ARTISTS = [
-    'hieuthuhai', 'soobin', 'rhyder', 'erik', 'atus', 'den', 'vu', 'son tung',
-    'phan manh quynh', 'my linh', 'minh tuyet', 'phuong thanh', 'nsnd tu long',
-    'cuong seven', 'orange', 'tlinh', 'mck', 'grey d', 'mono', 'quang hung masterd',
-    'duong domic', 'captain boy', 'wokeup', 'kewtiie', 'touliver', 'slimv', 'justatee',
-    'karik', 'suboi', 'thai vg', 'trang', 'voi ban don', 'anh tu'
+    'mck', 'tlinh', 'hieuthuhai', 'soobin', 'rhyder', 'erik', 'atus', 'den', 'đen', 'vu', 'vũ', 'son tung', 'sơn tùng', 'sơn tùng m-tp',
+    'phan manh quynh', 'phan mạnh quỳnh', 'my linh', 'mỹ linh', 'minh tuyet', 'minh tuyết', 'phuong thanh', 'phương thanh',
+    'nsnd tu long', 'tự long', 'cuong seven', 'cường seven', 'orange', 'grey d', 'mono', 'quang hung masterd', 'quang hùng masterd',
+    'duong domic', 'dương domic', 'captain boy', 'wokeup', 'kewtiie', 'touliver', 'slimv', 'justatee',
+    'karik', 'suboi', 'thai vg', 'trang', 'voi ban don', 'anh tu', 'anh tú', 'hurrykng', 'phap kieu', 'pháp kiều',
+    'tag', 'bray', 'b ray', 'masew', 'binz', 'soobin hoang son', 'hoang dung', 'hoàng dũng', 'vu cat tuong', 'vũ cát tường',
+    'duc phuc', 'đức phúc', 'hoa minzy', 'hòa minzy', 'amee', 'min', 'jack', 'j97', 'k-icm', 'kicm',
+    'low g', 'wxrdie', '24k.right', 'gill', 'tage', 'obito', 'vstra', 'marzuz', 'wean', 'naomi', 'ronboogz',
+    'taylor swift', 'ariana grande', 'billie eilish', 'justin bieber', 'the weeknd', 'drake', 'post malone', 'eminem',
+    'charlie puth', 'bruno mars', 'ed sheeran', 'adele', 'bts', 'blackpink', 'newjeans', 'aespa', 'ive', 'twice'
   ];
-  return KNOWN_ARTISTS.some((a) => lower.includes(a));
+
+  const cleanBase = s.replace(/[\(\[\{][^\)\]\}]*[\)\]\}]/g, '').trim().toLowerCase();
+  if (KNOWN_ARTISTS.some((a) => cleanBase === a || cleanBase === normalizeCanonicalString(a))) {
+    artistScore += 70;
+  } else if (KNOWN_ARTISTS.some((a) => lower.includes(a))) {
+    artistScore += 25;
+  }
+
+  // 3. Ký tự kết nối nghệ sĩ: "A x B", "A & B", "A, B, C"
+  if (/\s+(?:x|X|vs\.?|vs|and|và)\s+/i.test(cleanBase) || /[,;&+]/.test(cleanBase)) {
+    artistScore += 30;
+  }
+
+  // 4. Số từ và độ dài chuỗi
+  const words = cleanBase.split(/\s+/).filter(Boolean);
+  if (words.length >= 1 && words.length <= 3) {
+    artistScore += 15;
+  } else if (words.length >= 5) {
+    titleScore += 35;
+  }
+
+  return { artistScore, titleScore };
+}
+
+function isLikelyArtistString(str: string): boolean {
+  const { artistScore, titleScore } = scoreArtistVsTitle(str);
+  return artistScore > titleScore;
 }
 
 /**
@@ -523,6 +567,17 @@ export function parseVietnameseMusicMetadata(
 ): ParsedVietnameseMetadata {
   let originalTitle = (rawTitle || '').trim();
   let artist = (rawArtist || '').trim();
+
+  // Tự động phát hiện và đảo ngược lại nếu rawTitle là Tên Nghệ Sĩ và rawArtist là Tên Bài Hát
+  if (originalTitle && artist && !['youtube music', 'nghệ sĩ chưa rõ', 'unknown artist', 'unknown'].includes(artist.toLowerCase())) {
+    const tScore = scoreArtistVsTitle(originalTitle);
+    const aScore = scoreArtistVsTitle(artist);
+    if (tScore.artistScore >= 40 && aScore.titleScore >= 30 && tScore.artistScore > tScore.titleScore && aScore.titleScore > aScore.artistScore) {
+      const temp = originalTitle;
+      originalTitle = artist;
+      artist = temp;
+    }
+  }
 
   // 1. Detect Vietnamese Show catalog
   const { show, stageOrRound, movieTitle } = detectVietnameseShow(originalTitle, artist || channelName);
@@ -605,37 +660,36 @@ export function parseVietnameseMusicMetadata(
   if (foundHyphenSegment) {
     const subParts = foundHyphenSegment.split(/\s+[-–—]\s+/).map((p) => cleanEnclosingPunctuation(p)).filter(Boolean);
     if (subParts.length >= 2) {
-      const part0IsArtist = isLikelyArtistString(subParts[0]);
-      const part1IsArtist = isLikelyArtistString(subParts[1]);
+      const score0 = scoreArtistVsTitle(subParts[0]);
+      const score1 = scoreArtistVsTitle(subParts[1]);
 
-      if (part1IsArtist && !part0IsArtist) {
-        // [Show] Title - Artist (e.g. THÀNH PHỐ TÌNH YÊU - HIEUTHUHAI, RHYDER...)
+      if (score1.artistScore > score0.artistScore && score0.titleScore >= score1.titleScore) {
+        // subParts[0] là Title, subParts[1] là Artist (ví dụ: Nếu Như Ta Chẳng Còn (feat...) - MCK)
         finalRawTitle = subParts[0];
         finalRawArtist = subParts.slice(1).join(' - ');
-      } else if (part0IsArtist && !part1IsArtist) {
-        // Artist - Title (e.g. Sơn Tùng M-TP - Đừng Làm Trái Tim Anh Đau)
+      } else if (score0.artistScore > score1.artistScore && score1.titleScore >= score0.titleScore) {
+        // subParts[0] là Artist, subParts[1] là Title (ví dụ: MCK - Nếu Như Ta Chẳng Còn (feat...))
         finalRawArtist = subParts[0];
         finalRawTitle = subParts.slice(1).join(' - ');
+      } else if (show) {
+        // Show được nhận diện: Mặc định Title - Artist
+        finalRawTitle = subParts[0];
+        finalRawArtist = subParts.slice(1).join(' - ');
       } else {
-        // If show is recognized, default to Title - Artist
-        if (show) {
-          finalRawTitle = subParts[0];
-          finalRawArtist = subParts.slice(1).join(' - ');
-        } else {
-          finalRawArtist = subParts[0];
-          finalRawTitle = subParts.slice(1).join(' - ');
-        }
+        // Mặc định chuẩn âm nhạc quốc tế: Artist - Title
+        finalRawArtist = subParts[0];
+        finalRawTitle = subParts.slice(1).join(' - ');
       }
     }
   } else if (contentSegments.length >= 2) {
     // Case B: Pipe separated segments: Artist | Title or Title | Artist
-    const part0IsArtist = isLikelyArtistString(contentSegments[0]);
-    const part1IsArtist = isLikelyArtistString(contentSegments[1]);
+    const score0 = scoreArtistVsTitle(contentSegments[0]);
+    const score1 = scoreArtistVsTitle(contentSegments[1]);
 
-    if (part0IsArtist && !part1IsArtist) {
+    if (score0.artistScore > score1.artistScore) {
       finalRawArtist = contentSegments[0];
       finalRawTitle = contentSegments.slice(1).join(' ');
-    } else if (part1IsArtist && !part0IsArtist) {
+    } else if (score1.artistScore > score0.artistScore) {
       finalRawTitle = contentSegments[0];
       finalRawArtist = contentSegments.slice(1).join(' ');
     } else {

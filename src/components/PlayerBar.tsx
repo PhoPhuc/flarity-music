@@ -50,7 +50,9 @@ export const PlayerBar: React.FC<{
     toggleRepeat,
     isLyricsOpen,
     setLyricsOpen,
-    openAudioQualityModal
+    openAudioQualityModal,
+    setSelectedArtist,
+    setViewMode,
   } = usePlayer();
 
   const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +99,19 @@ export const PlayerBar: React.FC<{
             </div>
             <div className="flex flex-col truncate min-w-0">
               <span className="text-sm font-semibold text-white truncate">{currentTrack.title}</span>
-              <span className="text-xs text-neutral-400 truncate">{currentTrack.artist}</span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentTrack.artist) {
+                    setSelectedArtist(currentTrack.artist);
+                    setViewMode('artist-detail');
+                  }
+                }}
+                className="text-xs text-neutral-400 truncate hover:text-apple-pink hover:underline cursor-pointer transition-colors"
+                title={`Xem nghệ sĩ ${currentTrack.artist}`}
+              >
+                {currentTrack.artist}
+              </span>
             </div>
           </div>
 
@@ -155,7 +169,20 @@ export const PlayerBar: React.FC<{
           <div className="space-y-6 pb-8">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-black text-white truncate">{currentTrack.title}</h2>
-              <p className="text-base text-neutral-400 truncate">{currentTrack.artist}</p>
+              <p
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentTrack.artist) {
+                    setSelectedArtist(currentTrack.artist);
+                    setViewMode('artist-detail');
+                    setIsMobileExpanded(false);
+                  }
+                }}
+                className="text-base text-neutral-400 truncate hover:text-apple-pink hover:underline cursor-pointer transition-colors inline-block"
+                title={`Xem nghệ sĩ ${currentTrack.artist}`}
+              >
+                {currentTrack.artist}
+              </p>
               <div className="flex items-center justify-center gap-2 pt-1">
                 {audioAnalysis.badges.map((b) => (
                   <button
@@ -238,10 +265,20 @@ export const PlayerBar: React.FC<{
                 )}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-semibold text-white truncate hover:underline cursor-pointer">
+                <span className="text-sm font-semibold text-white truncate">
                   {currentTrack.title}
                 </span>
-                <span className="text-xs text-neutral-400 truncate hover:underline cursor-pointer">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (currentTrack.artist) {
+                      setSelectedArtist(currentTrack.artist);
+                      setViewMode('artist-detail');
+                    }
+                  }}
+                  className="text-xs text-neutral-400 truncate hover:text-apple-pink hover:underline cursor-pointer transition-colors"
+                  title={`Xem nghệ sĩ ${currentTrack.artist}`}
+                >
                   {currentTrack.artist}
                 </span>
               </div>

@@ -5,7 +5,7 @@ import { TrackList } from './TrackList';
 import { convertFileSrc } from '../../utils/tauriBridge';
 
 export const AlbumDetail: React.FC = () => {
-  const { selectedAlbum, goBack, playTrack, openBatchLyricsForAlbum } = usePlayer();
+  const { selectedAlbum, goBack, playTrack, openBatchLyricsForAlbum, setSelectedArtist, setViewMode } = usePlayer();
 
   const totalDurationSecs = useMemo(() => {
     if (!selectedAlbum) return 0;
@@ -66,7 +66,19 @@ export const AlbumDetail: React.FC = () => {
             {selectedAlbum.name}
           </h1>
           <p className="text-base font-semibold text-neutral-300 truncate w-full">
-            {selectedAlbum.artist} {selectedAlbum.year ? `• ${selectedAlbum.year}` : ''}
+            <span
+              onClick={() => {
+                if (selectedAlbum.artist) {
+                  setSelectedArtist(selectedAlbum.artist);
+                  setViewMode('artist-detail');
+                }
+              }}
+              className="hover:text-apple-pink hover:underline cursor-pointer transition-colors"
+              title={`Xem nghệ sĩ ${selectedAlbum.artist}`}
+            >
+              {selectedAlbum.artist}
+            </span>
+            {selectedAlbum.year ? ` • ${selectedAlbum.year}` : ''}
           </p>
 
           {/* Album Metadata: Số bài hát & Tổng thời lượng */}
