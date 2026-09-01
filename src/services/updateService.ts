@@ -47,6 +47,8 @@ export const compareVersions = (v1: string, v2: string): number => {
 /**
  * Nhận diện hệ điều hành người dùng để đề xuất đúng file cài đặt
  */
+import { isTauriAvailable, tauriAPI } from '../utils/tauriBridge';
+
 export const detectPlatform = (): 'windows' | 'macos' | 'linux' | 'unknown' => {
   if (typeof window === 'undefined') return 'unknown';
   const ua = window.navigator.userAgent.toLowerCase();
@@ -59,14 +61,25 @@ export const detectPlatform = (): 'windows' | 'macos' | 'linux' | 'unknown' => {
 };
 
 /**
- * Mở đường dẫn trên trình duyệt mặc định
+ * Mở đường dẫn trên trình duyệt mặc định của hệ điều hành
  */
-export const openExternalLink = (url: string) => {
-  if (!url) return;
+export const openExternalLink = async (url: string): Promise<boolean> => {
+  if (!url) return false;
+  try {
+    if (isTauriAvailable()) {
+      const res = await tauriAPI.openExternalUrl(url);
+      if (res) return true;
+    }
+  } catch (err) {
+    console.warn('[UpdateService] Tauri openExternalUrl failed, trying fallback:', err);
+  }
+
   try {
     window.open(url, '_blank', 'noopener,noreferrer');
+    return true;
   } catch (err) {
-    console.warn('[UpdateService] Failed to open url:', url, err);
+    console.warn('[UpdateService] Failed to open url via window.open:', url, err);
+    return false;
   }
 };
 

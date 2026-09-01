@@ -17,6 +17,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { LyricsSearchModal } from './components/LyricsSearchModal';
 import { BatchLyricsModal } from './components/BatchLyricsModal';
 import { UpdateNotificationModal } from './components/UpdateNotificationModal';
+import { UpdateToast } from './components/UpdateToast';
 import { useAppUpdater } from './hooks/useAppUpdater';
 import { NavigationHeader } from './components/NavigationHeader';
 import type { Album, Track } from './types';
@@ -131,7 +132,14 @@ const MainContent: React.FC = () => {
 
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [artistSearchQuery, setArtistSearchQuery] = useState('');
-  const { updateInfo, isUpdateModalOpen, setIsUpdateModalOpen } = useAppUpdater();
+  const {
+    updateInfo,
+    isUpdateModalOpen,
+    setIsUpdateModalOpen,
+    isUpdateToastOpen,
+    setIsUpdateToastOpen,
+    openFullModal,
+  } = useAppUpdater();
 
   const filteredArtistProfiles = useMemo(() => {
     if (!artistSearchQuery.trim()) return artistProfiles;
@@ -336,6 +344,16 @@ const MainContent: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={closeSettings}
       />
+
+      {/* Auto-Update Mini Floating Toast */}
+      {updateInfo && (
+        <UpdateToast
+          updateInfo={updateInfo}
+          isOpen={isUpdateToastOpen}
+          onOpenModal={openFullModal}
+          onClose={() => setIsUpdateToastOpen(false)}
+        />
+      )}
 
       {/* Auto-Update Notification Modal */}
       {updateInfo && (

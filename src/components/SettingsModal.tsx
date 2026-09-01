@@ -1536,15 +1536,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-neutral-200 flex items-center justify-between">
                           <span>Google Gemini API Key</span>
-                          <a
-                            href="https://aistudio.google.com/app/apikey"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1"
+                          <button
+                            type="button"
+                            onClick={() => openExternalLink('https://aistudio.google.com/app/apikey')}
+                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <span>Lấy API Key tại Google AI Studio</span>
                             <ExternalLink className="w-3 h-3" />
-                          </a>
+                          </button>
                         </label>
                         <div className="relative">
                           <input
@@ -1611,15 +1610,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-neutral-200 flex items-center justify-between">
                           <span>OpenAI API Key</span>
-                          <a
-                            href="https://platform.openai.com/api-keys"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1"
+                          <button
+                            type="button"
+                            onClick={() => openExternalLink('https://platform.openai.com/api-keys')}
+                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <span>Lấy API Key tại OpenAI Platform</span>
                             <ExternalLink className="w-3 h-3" />
-                          </a>
+                          </button>
                         </label>
                         <div className="relative">
                           <input
@@ -1661,15 +1659,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-neutral-200 flex items-center justify-between">
                           <span>OpenRouter API Key</span>
-                          <a
-                            href="https://openrouter.ai/keys"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1"
+                          <button
+                            type="button"
+                            onClick={() => openExternalLink('https://openrouter.ai/keys')}
+                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <span>Lấy API Key tại OpenRouter</span>
                             <ExternalLink className="w-3 h-3" />
-                          </a>
+                          </button>
                         </label>
                         <div className="relative">
                           <input
@@ -1710,7 +1707,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                               key={m}
                               type="button"
                               onClick={() => updateTransSettings({ openrouterModel: m })}
-                              className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/15 text-neutral-300 transition-colors"
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/15 text-neutral-300 transition-colors cursor-pointer"
                             >
                               {m.split('/')[1]}
                             </button>
@@ -1726,15 +1723,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-neutral-200 flex items-center justify-between">
                           <span>Anthropic Claude API Key</span>
-                          <a
-                            href="https://console.anthropic.com/"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1"
+                          <button
+                            type="button"
+                            onClick={() => openExternalLink('https://console.anthropic.com/')}
+                            className="text-[11px] text-apple-pink hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <span>Lấy API Key tại Anthropic Console</span>
                             <ExternalLink className="w-3 h-3" />
-                          </a>
+                          </button>
                         </label>
                         <div className="relative">
                           <input

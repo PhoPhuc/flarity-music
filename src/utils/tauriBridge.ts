@@ -146,6 +146,7 @@ export const tauriAPI = {
     thumbnail?: string;
   }) => safeInvoke<any>('download_youtube_track', params),
   shrinkMemory: () => safeInvoke<any>('shrink_memory'),
+  openExternalUrl: (url: string) => safeInvoke<boolean>('open_external_url', { url }),
 };
 
 // Auto attach to window for backwards compatibility with existing UI code

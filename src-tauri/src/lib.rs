@@ -121,6 +121,7 @@ pub fn run() {
             download_youtube_audio_track,
             get_random_library_artists,
             get_youtube_preview_stream_url,
+            open_external_url,
             shrink_memory,
         ])
         .build(tauri::generate_context!()) {

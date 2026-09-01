@@ -417,6 +417,37 @@ pub fn show_in_explorer(file_path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
+pub fn open_external_url(app: AppHandle, url: String) -> Result<bool, String> {
+    use tauri_plugin_opener::OpenerExt;
+    if let Ok(_) = app.opener().open_url(&url, None::<&str>) {
+        return Ok(true);
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", "", &url])
+            .spawn();
+        return Ok(true);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open")
+            .arg(&url)
+            .spawn();
+        return Ok(true);
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn();
+        return Ok(true);
+    }
+    #[allow(unreachable_code)]
+    Ok(false)
+}
+
+#[tauri::command]
 pub fn delete_track_file(
     state: State<'_, DbState>,
     track_id: String,
