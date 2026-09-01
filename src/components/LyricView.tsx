@@ -12,7 +12,12 @@ import {
   loadLyricSettings,
   loadTranslationSettings,
 } from '../types';
-import { getCachedTranslation, translateLyrics, stripLineIndexPrefix } from '../services/lyricsTranslationService';
+import {
+  getCachedTranslation,
+  translateLyrics,
+  stripLineIndexPrefix,
+  shouldDisplayTranslation,
+} from '../services/lyricsTranslationService';
 
 interface LyricViewProps {
   colors?: string[];
@@ -89,7 +94,8 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
     if (cached && cached.length === lyrics.length) {
       const map: Record<number, string> = {};
       cached.forEach((text, idx) => {
-        if (text && text !== lyrics[idx]?.text) {
+        const orig = lyrics[idx]?.text || '';
+        if (text && shouldDisplayTranslation(orig, text, transSettings.targetLanguage)) {
           map[idx] = text;
         }
       });
@@ -114,7 +120,10 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
           if (isCancelled) return;
           const map: Record<number, string> = {};
           translated.forEach((l, idx) => {
-            if (l.translation) map[idx] = l.translation;
+            const orig = lyrics[idx]?.text || '';
+            if (l.translation && shouldDisplayTranslation(orig, l.translation, transSettings.targetLanguage)) {
+              map[idx] = l.translation;
+            }
           });
           setTranslatedLinesMap(map);
         })
@@ -425,7 +434,9 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
                   : {};
 
                 const rawTrans = translatedLinesMap[index] || (settings.showTranslation ? line.translation : undefined);
-                const translatedText = rawTrans ? stripLineIndexPrefix(rawTrans) : undefined;
+                const cleanTrans = rawTrans ? stripLineIndexPrefix(rawTrans) : undefined;
+                const isVisibleTrans = cleanTrans && shouldDisplayTranslation(line.text, cleanTrans, transSettings.targetLanguage);
+                const translatedText = isVisibleTrans ? cleanTrans : undefined;
 
                 return (
                   <div

@@ -138,6 +138,7 @@ export const LyricsTranslationPopover: React.FC<LyricsTranslationPopoverProps> =
 
       setSuccessMsg('Đã dịch và đồng bộ lời bài hát thành công!');
       setTimeout(() => setSuccessMsg(null), 3000);
+      window.dispatchEvent(new CustomEvent('lyrics-translation-settings-updated', { detail: loadTranslationSettings() }));
       onTranslationUpdated?.();
     } catch (err: any) {
       setErrorMsg(err?.message || 'Có lỗi xảy ra trong quá trình dịch lời bài hát.');
@@ -151,6 +152,7 @@ export const LyricsTranslationPopover: React.FC<LyricsTranslationPopoverProps> =
     clearTranslationCache(trackKey);
     setSuccessMsg('Đã xóa bản dịch đã lưu của bài hát này.');
     setTimeout(() => setSuccessMsg(null), 2500);
+    window.dispatchEvent(new CustomEvent('lyrics-translation-settings-updated', { detail: loadTranslationSettings() }));
     onTranslationUpdated?.();
   };
 

@@ -102,31 +102,144 @@ async function translateWithGoogle(lines: string[], targetLang: string): Promise
   return translatedLines;
 }
 
-// System Prompt nâng cao: Đảm bảo dịch đúng ngữ cảnh bài hát, cảm xúc, phong hóa, phong cách tác giả
+// Tính khoảng cách Levenshtein giữa 2 chuỗi
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  const matrix: number[] = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = i;
+  }
+
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i - 1] === b[j - 1] ? matrix[j - 1] : Math.min(matrix[j - 1], matrix[j], prev) + 1;
+      matrix[j - 1] = prev;
+      prev = val;
+    }
+    matrix[b.length] = prev;
+  }
+
+  return matrix[b.length];
+}
+
+/**
+ * Chuẩn hóa chuỗi để so sánh (xóa dấu câu, viết thường, chuẩn hóa khoảng trắng)
+ */
+export function normalizeTextForComparison(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFC')
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"'’“”«»…\\[\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Tính độ tương đồng giữa 2 chuỗi (từ 0.0 đến 1.0)
+ */
+export function calculateTextSimilarity(textA: string, textB: string): number {
+  const normA = normalizeTextForComparison(textA);
+  const normB = normalizeTextForComparison(textB);
+
+  if (!normA && !normB) return 1.0;
+  if (!normA || !normB) return 0.0;
+  if (normA === normB) return 1.0;
+
+  const maxLen = Math.max(normA.length, normB.length);
+  if (maxLen === 0) return 1.0;
+
+  // Nếu một chuỗi chứa trọn chuỗi kia và độ dài chênh lệch không quá 20%
+  const minLen = Math.min(normA.length, normB.length);
+  if (minLen / maxLen >= 0.8 && (normA.includes(normB) || normB.includes(normA))) {
+    return 1.0;
+  }
+
+  const distance = levenshteinDistance(normA, normB);
+  return Math.max(0, 1 - distance / maxLen);
+}
+
+/**
+ * Nhận diện chuỗi có phải tiếng Việt (dựa trên các ký tự có dấu tiếng Việt đặc trưng)
+ */
+export function isVietnameseText(text: string): boolean {
+  if (!text) return false;
+  const vnRegex = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i;
+  return vnRegex.test(text);
+}
+
+/**
+ * Quyết định xem có nên hiển thị dòng phụ dịch thuật hay không:
+ * 1. Không hiển thị nếu chuỗi dịch rỗng.
+ * 2. Không hiển thị nếu cùng ngôn ngữ (ví dụ bài hát gốc tiếng Việt và ngôn ngữ đích là tiếng Việt).
+ * 3. Không hiển thị nếu độ trùng khớp giữa dòng gốc và dòng dịch > 80% (ví dụ ad-libs 'yeah yeah', lặp từ, tên riêng).
+ */
+export function shouldDisplayTranslation(
+  originalText: string,
+  translatedText: string | undefined | null,
+  targetLang: string = 'vi'
+): boolean {
+  if (!translatedText) return false;
+
+  const origTrimmed = originalText.trim();
+  const transTrimmed = translatedText.trim();
+
+  if (!origTrimmed || !transTrimmed) return false;
+
+  // 1. Kiểm tra cùng ngôn ngữ:
+  // Nếu đích là tiếng Việt ('vi') và dòng gốc là tiếng Việt có dấu
+  if (targetLang === 'vi' && isVietnameseText(origTrimmed)) {
+    return false;
+  }
+
+  // 2. Kiểm tra độ tương đồng / trùng khớp >= 80% (0.8)
+  const similarity = calculateTextSimilarity(origTrimmed, transTrimmed);
+  if (similarity >= 0.8) {
+    return false;
+  }
+
+  return true;
+}
+
+// System Prompt nâng cao: Dịch thoát ý theo ngữ cảnh âm nhạc, tự nhiên, đậm chất thi ca, tránh hàn lâm cứng nhắc
 function buildAiPrompt(lines: string[], targetLang: string, metadata: { title: string; artist: string; album?: string }): string {
   const langName = getLanguageName(targetLang);
   const numberedLyrics = lines.map((line, idx) => `[${idx + 1}] ${line}`).join('\n');
 
-  return `Bạn là một dịch giả thi ca và âm nhạc chuyên nghiệp, am hiểu sâu sắc về văn hóa nghệ thuật và phong cách biểu đạt của các nghệ sĩ âm nhạc.
+  return `Bạn là một dịch giả âm nhạc và nhà biên soạn lời bài hát hàng đầu, có vốn từ phong phú, khả năng cảm thụ nhịp điệu và am hiểu sâu sắc văn hóa âm nhạc đương đại (Pop, Rap/Hip-hop, R&B, Ballad, Rock, EDM, Indie...).
 
 NHIỆM VỤ: Dịch lời bài hát sau đây sang ${langName}.
 - Tên bài hát: "${metadata.title}"
-- Nghệ sĩ / Ban nhạc: "${metadata.artist}"
+- Nghệ sĩ: "${metadata.artist}"
 ${metadata.album ? `- Album: "${metadata.album}"` : ''}
 
-QUY TẮC DỊCH THUẬT BẮT BUỘC:
-1. THẤU CẢM NGỮ CẢNH & PHONG HÓA:
-   - Nghiên cứu kỹ ngữ cảnh, nội tâm cảm xúc, ẩn dụ thi ca, tiếng lóng và phong cách biểu diễn đặc trưng của nghệ sĩ ${metadata.artist}.
-   - Dịch thoát ý tự nhiên, văn minh, phù hợp với thuần phong mỹ tục nhưng giữ trọn vẹn hồn cốt của tác phẩm gốc.
-2. TÍNH NHẠC VÀ NHỊP ĐIỆU:
-   - Lời dịch phải êm tai, mượt mà, bay bổng, có nhạc tính để người nghe có thể ngân nga theo giai điệu bài hát.
-3. KHỚP DÒNG TUYỆT ĐỐI 1:1:
-   - Giữ nguyên chính xác số lượng dòng và thứ tự câu hát.
-   - Trả về kết quả dưới định dạng JSON mảng chuỗi thuần túy đúng với số dòng ban đầu: ["Lời dịch câu 1", "Lời dịch câu 2", ...].
-   - TUYỆT ĐỐI KHÔNG CHÈN SỐ THỨ TỰ, KHÔNG CHÈN [1], [2], 1., 2. Ở ĐẦU CÂU TRẢ VỀ.
-   - KHÔNG THÊM BẤT KỲ LỜI BÌNH HOẶC GIẢI THÍCH NÀO KHÁC.
+QUY TẮC DỊCH THUẬT QUAN TRỌNG (BẮT BUỘC TUÂN THỦ):
 
-DANH SÁCH CÁC CÂU CẦN DỊCH:
+1. THOÁT Ý THEO NGỮ CẢNH ÂM NHẠC & VIBE BÀI HÁT (CHỐNG HÀN LÂM, CỨNG NHẮC):
+   - TUYỆT ĐỐI KHÔNG dịch theo kiểu từ điển, sách giáo khoa hay văn bản hành chính khuôn mẫu.
+   - Phải cảm nhận đúng bối cảnh, thể loại, tâm trạng (mood) và phong cách biểu đạt đặc trưng của bài hát.
+   - Nhận diện đúng tiếng lóng (slang), ẩn dụ, hàm ý âm nhạc và văn hóa đời thực:
+     * Ví dụ: Từ ngữ miêu tả hành động trong nhạc quẩy/hip-hop/party như "lean", "tippin", "rocking", "vibing" không dịch nghĩa đen hàn lâm là "nghiêng mình / lắc lư vật lý", mà dịch tự nhiên theo phong cách âm nhạc như "quẩy hết mình", "phiêu theo điệu nhạc", "thả mình theo beat".
+     * Các từ lóng như "flex" -> "khoe cá tính / thể hiện", "ice" -> "kim cương lấp lánh", "chill" -> "thư giãn / êm dịu", "vibe" -> "tâm trạng / cảm xúc".
+   - Với nhạc tình cảm/Ballad/Acoustic: Dùng từ ngữ tình tứ, mềm mại, giàu chất thơ, xúc động và tự nhiên như lời tâm sự chân thành.
+   - Với nhạc Rap/Trap/Hiphop/EDM: Dùng ngôn ngữ phóng khoáng, bắt tai, gieo vần điệu, năng động, mang hơi thở âm nhạc giới trẻ.
+
+2. TÍNH NHẠC, ĐỘ MƯỢT VÀ DỄ HÁT THEO:
+   - Câu dịch phải trôi chảy, êm tai, câu từ gãy gọn, có nhịp phách để người nghe vừa đọc vừa cảm nhận được giai điệu bài hát.
+
+3. XỬ LÝ ĐẶC BIỆT CÙNG NGÔN NGỮ & AD-LIBS:
+   - Nếu câu gốc vốn dĩ ĐÃ LÀ ${langName} hoặc là tên riêng, tiếng đệm ad-libs ("Yeah yeah", "Na na na", "Oh oh"): hãy giữ nguyên bản gốc hoặc chỉ điều chỉnh nhẹ cho tự nhiên, không cố tình diễn giải dài dòng.
+
+4. BẢO TOÀN ĐÚNG SỐ DÒNG 1:1 & ĐỊNH DẠNG JSON:
+   - Trả về CHÍNH XÁC số lượng dòng tương ứng bằng định dạng JSON mảng chuỗi thuần túy: ["Lời dịch câu 1", "Lời dịch câu 2", ...].
+   - TUYỆT ĐỐI KHÔNG chèn số thứ tự (như [1], [2], 1., 2., Câu 1:...) vào đầu câu trong mảng kết quả.
+   - KHÔNG thêm bất kỳ văn bản giải thích, lời chào hay bình luận nào ngoài mảng JSON.
+
+DANH SÁCH CÁC CÂU LỜI HÁT GỐC CẦN DỊCH:
 ${numberedLyrics}`;
 }
 
