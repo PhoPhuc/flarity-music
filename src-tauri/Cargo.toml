@@ -1,6 +1,6 @@
 [package]
 name = "flarity-music"
-version = "1.1.6"
+version = "1.1.7"
 description = "Flarity Desktop Music Player App"
 authors = ["PhoPhuc", "Antigravity <Google DeepMind>"]
 edition = "2021"

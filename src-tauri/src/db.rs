@@ -280,6 +280,19 @@ pub fn init_db(app: &AppHandle) -> Result<Connection> {
         let _ = conn.execute("ALTER TABLE saved_tracks ADD COLUMN lrc_path TEXT;", []);
     }
 
+    // Dọn dẹp bloat: loại bỏ Base64 rác khỏi DB, giới hạn log lịch sử trong 90 ngày và truncate WAL
+    let _ = conn.execute_batch(
+        "
+        UPDATE play_history SET album_art = NULL WHERE album_art LIKE 'data:%' OR length(album_art) > 500;
+        UPDATE daily_song_analytics SET album_art = NULL WHERE album_art LIKE 'data:%' OR length(album_art) > 500;
+        UPDATE song_analytics_all SET album_art = NULL WHERE album_art LIKE 'data:%' OR length(album_art) > 500;
+        UPDATE saved_tracks SET picture = NULL WHERE picture LIKE 'data:%' OR length(picture) > 500;
+        UPDATE playlists SET cover_art = NULL WHERE cover_art LIKE 'data:%' OR length(cover_art) > 500;
+        DELETE FROM play_history WHERE played_at < CAST(strftime('%s', 'now', '-90 days') AS INTEGER);
+        PRAGMA wal_checkpoint(TRUNCATE);
+        "
+    );
+
     Ok(conn)
 }
 
@@ -465,6 +478,10 @@ pub fn save_tracks(conn: &mut Connection, tracks: &[Track]) -> Result<()> {
         )?;
 
         for t in tracks {
+            let clean_picture = match t.picture.as_deref() {
+                Some(p) if p.starts_with("data:") || p.len() > 500 => None,
+                other => other,
+            };
             stmt.execute(params![
                 t.id,
                 t.file_path,
@@ -475,7 +492,7 @@ pub fn save_tracks(conn: &mut Connection, tracks: &[Track]) -> Result<()> {
                 t.year,
                 t.duration,
                 t.bpm.unwrap_or(0),
-                t.picture,
+                clean_picture,
                 if t.has_lyric { 1 } else { 0 },
                 t.lrc_path,
                 if t.has_mv { 1 } else { 0 },
@@ -492,6 +509,11 @@ pub fn log_play_record(conn: &Connection, input: &PlayRecordInput) -> Result<()>
     let date_key: i32 = chrono::Utc::now().format("%Y%m%d").to_string().parse().unwrap_or(0);
     let is_valid_num = if input.is_valid_play { 1 } else { 0 };
 
+    let clean_album_art = match input.album_art.as_deref() {
+        Some(a) if a.starts_with("data:") || a.len() > 500 => None,
+        other => other,
+    };
+
     conn.execute_batch("BEGIN TRANSACTION;")?;
 
     // 1. Ghi Raw Log
@@ -502,7 +524,7 @@ pub fn log_play_record(conn: &Connection, input: &PlayRecordInput) -> Result<()>
             input.song_id,
             input.song_title,
             input.artist_name,
-            input.album_art,
+            clean_album_art,
             now_ts,
             input.duration_listened,
             is_valid_num,
@@ -528,7 +550,7 @@ pub fn log_play_record(conn: &Connection, input: &PlayRecordInput) -> Result<()>
             input.song_id,
             input.song_title,
             input.artist_name,
-            input.album_art,
+            clean_album_art,
             input.duration_listened,
             is_valid_num,
         ],
@@ -553,7 +575,7 @@ pub fn log_play_record(conn: &Connection, input: &PlayRecordInput) -> Result<()>
             input.song_id,
             input.song_title,
             input.artist_name,
-            input.album_art,
+            clean_album_art,
             input.duration_listened,
             is_valid_num,
             now_ts,
@@ -692,15 +714,16 @@ pub fn get_analytics_stats(conn: &Connection, range: &str) -> Result<AnalyticsSt
              FROM song_analytics_all".to_string();
 
             top_songs_query = "SELECT 
-               song_id AS songId,
-               song_title AS title,
-               artist_name AS artist,
-               album_art AS picture,
-               valid_play_count AS playCount,
-               total_duration AS totalDuration
-             FROM song_analytics_all
-             WHERE valid_play_count > 0 OR total_duration > 0
-             ORDER BY valid_play_count DESC, total_duration DESC
+               s.song_id AS songId,
+               s.song_title AS title,
+               s.artist_name AS artist,
+               COALESCE(st.picture, s.album_art) AS picture,
+               s.valid_play_count AS playCount,
+               s.total_duration AS totalDuration
+             FROM song_analytics_all s
+             LEFT JOIN saved_tracks st ON s.song_id = st.id
+             WHERE s.valid_play_count > 0 OR s.total_duration > 0
+             ORDER BY s.valid_play_count DESC, s.total_duration DESC
              LIMIT 20".to_string();
 
             top_artists_query = "SELECT 
@@ -733,15 +756,16 @@ pub fn get_analytics_stats(conn: &Connection, range: &str) -> Result<AnalyticsSt
 
             top_songs_query = format!(
                 "SELECT 
-                   song_id AS songId,
-                   song_title AS title,
-                   artist_name AS artist,
-                   album_art AS picture,
-                   SUM(valid_play_count) AS playCount,
-                   SUM(total_duration) AS totalDuration
-                 FROM daily_song_analytics
-                 WHERE date_key >= CAST(strftime('%Y%m%d', 'now', '{} days', 'localtime') AS INTEGER)
-                 GROUP BY song_id
+                   d.song_id AS songId,
+                   d.song_title AS title,
+                   d.artist_name AS artist,
+                   COALESCE(st.picture, d.album_art) AS picture,
+                   SUM(d.valid_play_count) AS playCount,
+                   SUM(d.total_duration) AS totalDuration
+                 FROM daily_song_analytics d
+                 LEFT JOIN saved_tracks st ON d.song_id = st.id
+                 WHERE d.date_key >= CAST(strftime('%Y%m%d', 'now', '{} days', 'localtime') AS INTEGER)
+                 GROUP BY d.song_id
                  HAVING playCount > 0 OR totalDuration > 0
                  ORDER BY playCount DESC, totalDuration DESC
                  LIMIT 20",
@@ -771,15 +795,16 @@ pub fn get_analytics_stats(conn: &Connection, range: &str) -> Result<AnalyticsSt
              WHERE played_at >= unixepoch('now', '-1 hour')".to_string();
 
             top_songs_query = "SELECT 
-               song_id AS songId,
-               song_title AS title,
-               artist_name AS artist,
-               album_art AS picture,
-               SUM(CASE WHEN is_valid_play = 1 THEN 1 ELSE 0 END) AS playCount,
-               SUM(duration_listened) AS totalDuration
-             FROM play_history
-             WHERE played_at >= unixepoch('now', '-1 hour')
-             GROUP BY song_id
+               p.song_id AS songId,
+               p.song_title AS title,
+               p.artist_name AS artist,
+               COALESCE(st.picture, p.album_art) AS picture,
+               SUM(CASE WHEN p.is_valid_play = 1 THEN 1 ELSE 0 END) AS playCount,
+               SUM(p.duration_listened) AS totalDuration
+             FROM play_history p
+             LEFT JOIN saved_tracks st ON p.song_id = st.id
+             WHERE p.played_at >= unixepoch('now', '-1 hour')
+             GROUP BY p.song_id
              HAVING playCount > 0 OR totalDuration > 0
              ORDER BY playCount DESC, totalDuration DESC
              LIMIT 20".to_string();
@@ -803,15 +828,16 @@ pub fn get_analytics_stats(conn: &Connection, range: &str) -> Result<AnalyticsSt
              FROM song_analytics_all".to_string();
 
             top_songs_query = "SELECT 
-               song_id AS songId,
-               song_title AS title,
-               artist_name AS artist,
-               album_art AS picture,
-               valid_play_count AS playCount,
-               total_duration AS totalDuration
-             FROM song_analytics_all
-             WHERE valid_play_count > 0 OR total_duration > 0
-             ORDER BY valid_play_count DESC, total_duration DESC
+               s.song_id AS songId,
+               s.song_title AS title,
+               s.artist_name AS artist,
+               COALESCE(st.picture, s.album_art) AS picture,
+               s.valid_play_count AS playCount,
+               s.total_duration AS totalDuration
+             FROM song_analytics_all s
+             LEFT JOIN saved_tracks st ON s.song_id = st.id
+             WHERE s.valid_play_count > 0 OR s.total_duration > 0
+             ORDER BY s.valid_play_count DESC, s.total_duration DESC
              LIMIT 20".to_string();
 
             top_artists_query = "SELECT 

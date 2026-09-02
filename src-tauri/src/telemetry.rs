@@ -110,6 +110,12 @@ pub fn write_telemetry_flush_to_db(conn: &mut Connection, payload: TelemetryFlus
     // Mở Single Transaction ghi đồng bộ 3 bảng
     let tx = conn.transaction()?;
 
+    // Bảo vệ DB chống phình to: Tuyệt đối không lưu chuỗi Base64 (data:image/...) vào nhật ký phát nhạc
+    let clean_album_art = match payload.session.album_art {
+        Some(ref art) if art.starts_with("data:") || art.len() > 500 => None,
+        other => other,
+    };
+
     // 1. Ghi Raw Log
     tx.execute(
         "INSERT INTO play_history (song_id, song_title, artist_name, album_art, played_at, duration_listened, is_valid_play)
@@ -118,7 +124,7 @@ pub fn write_telemetry_flush_to_db(conn: &mut Connection, payload: TelemetryFlus
             payload.session.song_id,
             payload.session.title,
             payload.session.artist,
-            payload.session.album_art,
+            clean_album_art,
             now_timestamp,
             payload.duration_listened,
             valid_num
@@ -140,7 +146,7 @@ pub fn write_telemetry_flush_to_db(conn: &mut Connection, payload: TelemetryFlus
             payload.session.song_id,
             payload.session.title,
             payload.session.artist,
-            payload.session.album_art,
+            clean_album_art,
             payload.duration_listened,
             valid_num
         ],
@@ -161,7 +167,7 @@ pub fn write_telemetry_flush_to_db(conn: &mut Connection, payload: TelemetryFlus
             payload.session.song_id,
             payload.session.title,
             payload.session.artist,
-            payload.session.album_art,
+            clean_album_art,
             payload.duration_listened,
             valid_num,
             now_timestamp

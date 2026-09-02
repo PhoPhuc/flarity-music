@@ -25,7 +25,7 @@ export const useAudioTelemetry = ({ audio, track }: UseAudioTelemetryOptions) =>
               songId: track.id,
               title: track.title,
               artist: track.artist,
-              albumArt: track.picture,
+              albumArt: track.picture?.startsWith('data:') || (track.picture?.length ?? 0) > 500 ? undefined : track.picture,
               trackDuration: audio.duration || track.duration || 0,
             }
           : null
