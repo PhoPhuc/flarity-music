@@ -12,14 +12,8 @@ import {
   Search, 
   X, 
   Shuffle, 
-  Clock,
-  Radio,
-  Heart,
-  Flame,
   Zap,
   RefreshCw,
-  TrendingUp,
-  Compass,
   ChevronRight,
 } from 'lucide-react';
 import type { Track, Album, Playlist, ArtistProfile } from '../types';
@@ -42,7 +36,6 @@ const createPseudoRandom = (seed: number) => {
 };
 
 const HOME_REC_TTL_MS = 15 * 60 * 1000;
-let cachedHomeRecommendedToday: { timestamp: number; tracks: Track[] } | null = null;
 let cachedHomeGenreHubs: { timestamp: number; hubs: MusicGenreHub[] } | null = null;
 
 interface MusicGenreHub {

@@ -12,7 +12,6 @@ import {
   Disc,
   Mic2,
   FileVideo,
-  Search,
   Sparkles,
 } from 'lucide-react';
 import type { Track, Album } from '../types';

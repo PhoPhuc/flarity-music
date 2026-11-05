@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  BarChart3, 
   Clock, 
   Flame, 
   Music, 
   User, 
   Headphones, 
   TrendingUp, 
-  Sparkles,
-  Calendar,
   Camera
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';

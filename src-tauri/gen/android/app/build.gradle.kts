@@ -6,6 +6,14 @@ plugins {
     id("rust")
 }
 
+val releaseKeystore = Properties().apply {
+    val propFile = file("keystore.properties")
+    if (propFile.exists()) {
+        propFile.inputStream().use { load(it) }
+    }
+}
+val hasReleaseSigning = releaseKeystore.getProperty("storeFile") != null
+
 val tauriProperties = Properties().apply {
     val propFile = file("tauri.properties")
     if (propFile.exists()) {
@@ -25,12 +33,15 @@ android {
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
+    // Thông tin ký release nằm ở keystore.properties (không commit). Xem keystore.properties.example.
     signingConfigs {
-        create("release") {
-            storeFile = file("flarity_keystore.jks")
-            storePassword = "flarity123"
-            keyAlias = "flaritykey"
-            keyPassword = "flarity123"
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystore.getProperty("storeFile"))
+                storePassword = releaseKeystore.getProperty("storePassword")
+                keyAlias = releaseKeystore.getProperty("keyAlias")
+                keyPassword = releaseKeystore.getProperty("keyPassword")
+            }
         }
     }
     buildTypes {
@@ -47,7 +58,9 @@ android {
             }
         }
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }

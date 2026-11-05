@@ -6,8 +6,6 @@ import {
   Check,
   Copy,
   Layers,
-  Music,
-  User,
   Sparkles,
 } from 'lucide-react';
 import { convertFileSrc } from '../utils/tauriBridge';

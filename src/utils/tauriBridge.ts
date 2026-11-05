@@ -78,6 +78,8 @@ export const tauriAPI = {
     safeInvoke<boolean>('record_telemetry_heartbeat', { payload }),
   telemetryOnPlay: () => safeInvoke<boolean>('telemetry_on_play'),
   telemetryOnPause: () => safeInvoke<boolean>('telemetry_on_pause'),
+  telemetryFlush: () => safeInvoke<boolean>('telemetry_flush'),
+  getDbStatus: () => safeInvoke<boolean>('get_db_status'),
   telemetryOnTrackChange: (track: { songId: string; title: string; artist: string; albumArt?: string; trackDuration: number } | null) =>
     safeInvoke<boolean>('telemetry_on_track_change', { track }),
   telemetryOnRateChange: (newRate: number) => safeInvoke<boolean>('telemetry_on_rate_change', { newRate }),

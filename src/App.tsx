@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useMemo } from 'react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { Sidebar } from './components/Sidebar';
 import { BottomNavBar } from './components/Mobile/BottomNavBar';
@@ -24,7 +24,7 @@ import type { Album, Track } from './types';
 import { ListMusic, Play, Shuffle, Search, X, ArrowLeft } from 'lucide-react';
 import { formatTime } from './utils/lrcParser';
 import { isTrackByArtist, getRandomArtistCover } from './utils/artistParser';
-import { convertFileSrc } from './utils/tauriBridge';
+import { convertFileSrc, tauriAPI } from './utils/tauriBridge';
 
 // Lazy load các view nặng – chỉ load khi người dùng điều hướng đến
 const AnalyticsView = lazy(() => import('./components/AnalyticsView').then(m => ({ default: m.AnalyticsView })));
@@ -105,7 +105,6 @@ const CollectionHeader: React.FC<{
 const MainContent: React.FC = () => {
   const {
     viewMode,
-    setViewMode,
     albums,
     tracks,
     selectedAlbum,
@@ -415,6 +414,18 @@ const MainContent: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
+  // Cảnh báo khi app đang chạy bằng DB tạm (không mở được file DB thật): dữ liệu sẽ không được lưu.
+  useEffect(() => {
+    void tauriAPI
+      .getDbStatus()
+      .then((persistent) => {
+        if (persistent === false) {
+          window.alert('Không mở được cơ sở dữ liệu. Thư viện và lịch sử nghe sẽ không được lưu trong phiên này. Hãy khởi động lại app.');
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
   console.log(">>> [FE STEP 2] App Component Rendered");
   const { isLoadingLibrary, setViewMode } = usePlayer();
   const [mobileTab, setMobileTab] = useState<"home" | "discovery" | "library" | "search" | "analytics">("home");

@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Languages,
-  Sparkles,
   Bot,
   Globe,
   RefreshCw,
-  Sliders,
   Check,
   Loader2,
   AlertCircle,

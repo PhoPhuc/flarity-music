@@ -18,7 +18,7 @@ import {
   Disc
 } from 'lucide-react';
 import { formatTime } from '../utils/lrcParser';
-import type { Track } from '../types';
+import type { } from '../types';
 import { analyzeTrackAudio } from '../utils/audioTech';
 import { convertFileSrc } from '../utils/tauriBridge';
 

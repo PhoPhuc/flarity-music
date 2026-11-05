@@ -371,7 +371,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isMvOpenRef.current = isMvOpen;
   }, [isMvOpen]);
 
-  const audioRef = useRef<HTMLAudioElement>(new Audio());
+  // Một phần tử Audio duy nhất; useRef(new Audio()) sẽ tạo đối tượng mới mỗi lần render.
+  const [audioElement] = useState(() => new Audio());
+  const audioRef = useRef<HTMLAudioElement>(audioElement);
 
   const activeTrackRef = useRef<Track | null>(null);
   const { flushTelemetry } = useAudioTelemetry({
@@ -405,9 +407,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return extractArtistProfiles(tracks);
   }, [tracks]);
 
-  const { data: fetchedTracks, isLoading: isTracksLoading } = useTracksQuery();
-  const { data: fetchedPlaylists, isLoading: isPlaylistsLoading } = usePlaylistsQuery();
-  const { invalidateTracks, invalidatePlaylists, invalidateAll } = useInvalidateMusicQueries();
+  const { data: fetchedTracks } = useTracksQuery();
+  const { data: fetchedPlaylists } = usePlaylistsQuery();
+  const { invalidateTracks, invalidateAll } = useInvalidateMusicQueries();
 
   // Đồng bộ bài hát từ CSDL vào RAM và lập tức giải phóng màn hình chờ
   useEffect(() => {
@@ -1311,7 +1313,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     setUpdatedTrackIds(prev => new Set([...prev, trackId]));
 
-    const updatedTrack = updatedList.find(t => t.id === trackId) || { hasLyric: true, lrcPath: lrcFilePath };
 
     setCurrentTrack(prev => {
       if (prev?.id === trackId) {

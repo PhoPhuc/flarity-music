@@ -34,3 +34,7 @@ release
 .env
 .env.*
 
+
+# Machine-specific cargo settings (copy from .cargo/config.toml.example)
+/.cargo/config.toml
+/src-tauri/.cargo/config.toml

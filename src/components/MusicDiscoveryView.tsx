@@ -8,17 +8,10 @@ import {
   AlertCircle,
   RefreshCw,
   Play,
-  Pause,
   Music2,
   Film,
-  User,
-  Clock,
   Loader2,
   X,
-  Shuffle,
-  ChevronRight,
-  Check,
-  Volume2,
   Trash2,
   FolderOpen,
   HardDrive,
@@ -30,7 +23,7 @@ import { tauriAPI } from '../utils/tauriBridge';
 import { discoveryRecLRU, discoveryStreamLRU } from '../utils/lruCache';
 import { SoundWave } from './SoundWave';
 import { extractCleanArtistAndTitle, detectVietnameseShow, normalizeCanonicalString } from '../utils/artistParser';
-import type { Track, DiscoveryTrack, DownloadItem, ArtistProfile } from '../types';
+import type { Track, DiscoveryTrack, DownloadItem } from '../types';
 
 let globalActiveRecommendations: { data: DiscoveryTrack[]; artists: string[]; exp: number } | null = null;
 
@@ -69,7 +62,7 @@ export const MusicDiscoveryView: React.FC = () => {
 
   const [recommendedTracks, setRecommendedTracks] = useState<DiscoveryTrack[]>(() => globalActiveRecommendations?.data || []);
   const [isLoadingRecs, setIsLoadingRecs] = useState(false);
-  const [sampledArtists, setSampledArtists] = useState<string[]>(() => globalActiveRecommendations?.artists || []);
+  const [, setSampledArtists] = useState<string[]>(() => globalActiveRecommendations?.artists || []);
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('random_all');
 
   const [isArtistModalOpen, setIsArtistModalOpen] = useState(false);

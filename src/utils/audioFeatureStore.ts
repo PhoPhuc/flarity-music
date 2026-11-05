@@ -1,6 +1,5 @@
 import {
   extractRepresentativeDualPCM,
-  extractRepresentativePCM,
   analyzeAudioSignal,
   type DetailedAudioAnalysis,
 } from './audioClassifierEngine';

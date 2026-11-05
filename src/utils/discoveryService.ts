@@ -1,5 +1,5 @@
 import type { DiscoveryTrack, Track, ArtistProfile } from '../types';
-import { parseVietnameseMusicMetadata, extractCleanArtistAndTitle } from './artistParser';
+import { parseVietnameseMusicMetadata } from './artistParser';
 
 /**
  * Helper fetch an toàn với AbortController timeout

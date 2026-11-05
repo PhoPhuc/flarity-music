@@ -15,9 +15,7 @@ import {
   Search,
   Sparkles,
   Layers,
-  ThumbsUp,
   ShieldCheck,
-  Music,
 } from 'lucide-react';
 
 interface BatchLyricsModalProps {

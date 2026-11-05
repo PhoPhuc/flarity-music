@@ -28,15 +28,10 @@ import {
   Check,
   FolderPlus,
   Palette,
-  SlidersHorizontal,
-  FileText,
-  Info,
   Type,
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Waves,
-  Moon,
   Languages,
   Bot,
   Globe,
@@ -47,9 +42,6 @@ import {
   Loader2,
   RefreshCw,
   Download,
-  ArrowUpCircle,
-  Package,
-  Calendar,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import {
@@ -64,14 +56,12 @@ import {
   type Track,
   type LyricCustomizationSettings,
   type TranslationSettings,
-  type TranslationProvider,
   SUPPORTED_LANGUAGES,
   loadLyricSettings,
   saveLyricSettings,
   loadTranslationSettings,
   saveTranslationSettings,
   DEFAULT_LYRIC_SETTINGS,
-  DEFAULT_TRANSLATION_SETTINGS,
 } from '../types';
 import { testTranslationProvider } from '../services/lyricsTranslationService';
 import { useAppUpdater } from '../hooks/useAppUpdater';
@@ -119,7 +109,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       discoveryRecLRU.clear();
       discoveryStreamLRU.clear();
       setLruCacheBytes(0);
-      const res = await tauriAPI.shrinkMemory();
+      await tauriAPI.shrinkMemory();
       setShrinkSuccessMsg('Đã thu hồi tối đa Working Set RAM và dọn sạch Discovery Cache!');
       setTimeout(() => setShrinkSuccessMsg(null), 4000);
     } catch (e) {
@@ -130,9 +120,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   // General & Audio Mock Settings
-  const [crossfadeSec, setCrossfadeSec] = useState<number>(2);
   const [autoDownloadLyrics, setAutoDownloadLyrics] = useState<boolean>(true);
-  const [highQualityAudio, setHighQualityAudio] = useState<boolean>(true);
   const [glassmorphismEffect, setGlassmorphismEffect] = useState<boolean>(true);
   const [lyricSettings, setLyricSettings] = useState<LyricCustomizationSettings>(loadLyricSettings);
   const [transSettings, setTransSettings] = useState<TranslationSettings>(loadTranslationSettings);
@@ -876,7 +864,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                     <div className="max-h-80 overflow-y-auto divide-y divide-white/5 custom-scrollbar">
                       {filteredAndSortedTracks.length > 0 ? (
-                        filteredAndSortedTracks.slice(0, 100).map(({ track, format, sizeBytes, bitrateKbps, fileName }) => (
+                        filteredAndSortedTracks.slice(0, 100).map(({ track, format, sizeBytes, bitrateKbps }) => (
                           <div
                             key={track.id}
                             className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center hover:bg-white/[0.04] transition-colors text-xs"
