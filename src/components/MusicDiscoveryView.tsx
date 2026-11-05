@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import {
   Compass,
   Search,
@@ -65,7 +66,34 @@ export const MusicDiscoveryView: React.FC = () => {
   const [, setSampledArtists] = useState<string[]>(() => globalActiveRecommendations?.artists || []);
   const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('random_all');
 
+  // Trạng thái công cụ tải (yt-dlp / ffmpeg) lấy từ backend thay vì luôn hiển thị "Sẵn sàng"
+  const [engineStatus, setEngineStatus] = useState<'checking' | 'ready' | 'no-ytdlp' | 'no-ffmpeg'>('checking');
+  const engineStatusLabel: Record<typeof engineStatus, string> = {
+    checking: 'Đang kiểm tra engine...',
+    ready: 'Engine Sẵn Sàng (320kbps / 1080p)',
+    'no-ytdlp': 'Thiếu yt-dlp: chưa thể tìm & tải nhạc',
+    'no-ffmpeg': 'Thiếu ffmpeg: tải nhạc bị giới hạn (không chuyển đổi/ghép MV)',
+  };
+  useEffect(() => {
+    let cancelled = false;
+    tauriAPI
+      .checkDownloaderTools()
+      .then((status) => {
+        if (cancelled) return;
+        if (!status) setEngineStatus('ready'); // ngoài Tauri không có thông tin: không cảnh báo
+        else if (!status.isYtDlpAvailable) setEngineStatus('no-ytdlp');
+        else if (!status.isFfmpegAvailable) setEngineStatus('no-ffmpeg');
+        else setEngineStatus('ready');
+      })
+      .catch(() => {
+        if (!cancelled) setEngineStatus('ready');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [isArtistModalOpen, setIsArtistModalOpen] = useState(false);
+  useEscapeKey(() => setIsArtistModalOpen(false), isArtistModalOpen);
   const [artistModalSearch, setArtistModalSearch] = useState('');
 
   const [recSubCategory, setRecSubCategory] = useState<'all' | 'audio' | 'video'>('all');
@@ -404,8 +432,8 @@ export const MusicDiscoveryView: React.FC = () => {
               <p className="text-xs sm:text-sm text-neutral-300">Tìm kiếm, nghe thử và tải về thư viện với Metadata chuẩn.</p>
             </div>
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full text-xs text-neutral-300 shrink-0">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Engine Sẵn Sàng (320kbps / 1080p)</span>
+              <div className={`w-2 h-2 rounded-full ${engineStatus === 'ready' ? 'bg-emerald-400 animate-pulse' : engineStatus === 'checking' ? 'bg-neutral-500 animate-pulse' : 'bg-amber-400'}`} />
+              <span>{engineStatusLabel[engineStatus]}</span>
             </div>
           </div>
           <form onSubmit={handleSearch} className="relative">
@@ -473,7 +501,15 @@ export const MusicDiscoveryView: React.FC = () => {
                 <button onClick={() => setRecSubCategory('video')} className={`px-3 py-1 rounded-lg font-medium transition-all ${recSubCategory === 'video' ? 'bg-apple-pink text-white' : 'text-neutral-400'}`}>MV ({mvRecommendations.length})</button>
               </div>
             </div>
-            {isLoadingRecs ? <DiscoverySkeletonGrid count={12} /> : (
+            {isLoadingRecs ? <DiscoverySkeletonGrid count={12} /> : displayedRecommendations.length === 0 ? (
+              <div className="p-8 text-center text-xs text-neutral-500 border border-white/5 rounded-2xl bg-white/[0.02]">
+                {engineStatus === 'no-ytdlp'
+                  ? 'Chưa có gợi ý vì chưa cài yt-dlp. Hãy cài yt-dlp rồi mở lại màn hình này.'
+                  : artistProfiles.length === 0
+                    ? 'Thêm thư mục nhạc vào thư viện để nhận gợi ý theo nghệ sĩ.'
+                    : 'Chưa có gợi ý nào. Nhấn "Đổi Gợi Ý" để thử lại.'}
+              </div>
+            ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {displayedRecommendations.map((track) => (
                   <VerticalDiscoveryCard key={track.id} track={track} localTrack={getTrackInLibrary(track.title, track.artist)} isPreviewPlaying={previewTrackId === track.id} isResolvingStream={isResolvingStream && previewTrackId === track.id} previewProgress={previewTrackId === track.id ? previewAudioProgress : 0} onTogglePreview={() => handleTogglePreview(track)} onDownload={(type) => handleDownload(track, type)} onPlayLocal={(t) => playTrack(t)} onOpenMv={(t) => openMv(t)} />

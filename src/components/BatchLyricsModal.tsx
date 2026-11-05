@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { usePlayer } from '../context/PlayerContext';
 import { searchLrcLibLyrics } from '../utils/lrclibService';
 import { formatTime } from '../utils/lrcParser';
@@ -35,6 +36,7 @@ interface TrackProgressState {
 const SAFE_API_DELAY_MS = 1800;
 
 export const BatchLyricsModal: React.FC<BatchLyricsModalProps> = ({ isOpen, onClose }) => {
+  useEscapeKey(onClose, isOpen);
   const { batchLyricsAlbum, saveAndApplyLyrics, tracks } = usePlayer();
 
   const [isProcessing, setIsProcessing] = useState<boolean>(false);

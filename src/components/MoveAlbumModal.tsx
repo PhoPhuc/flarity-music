@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import type { Album } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { Search, X, Disc, ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -10,6 +11,7 @@ interface MoveAlbumModalProps {
 }
 
 export const MoveAlbumModal: React.FC<MoveAlbumModalProps> = ({ sourceAlbum, onClose }) => {
+  useEscapeKey(onClose, true);
   const { albums, mergeAlbum } = usePlayer();
   const [search, setSearch] = useState('');
   const [selectedTarget, setSelectedTarget] = useState<Album | null>(null);

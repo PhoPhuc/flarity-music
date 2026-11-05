@@ -75,7 +75,7 @@ export const QueueView: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[400px] max-w-[95vw] bg-[#121214]/95 backdrop-blur-2xl border-l border-white/10 z-40 p-5 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 select-none">
+    <div className="fixed inset-y-0 md:bottom-20 right-0 w-[400px] max-w-[95vw] bg-[#121214]/95 backdrop-blur-2xl border-l border-white/10 z-40 p-5 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 select-none">
       {/* Top Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-white/10">
         <div className="flex items-center gap-2.5">

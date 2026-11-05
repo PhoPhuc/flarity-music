@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import {
   X,
   Download,
@@ -88,6 +89,7 @@ export const ChartExportModal: React.FC<ChartExportModalProps> = ({
   topArtists,
   timeRangeLabel,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const [chartType, setChartType] = useState<ChartType>('both');
   const [limit, setLimit] = useState<ChartLimit>(10);
   const [isGenerating, setIsGenerating] = useState(false);

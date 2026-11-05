@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import {
   X,
   Sliders,
@@ -75,6 +76,7 @@ interface SettingsModalProps {
 type SettingsTab = 'storage' | 'audio' | 'translation' | 'folders' | 'general' | 'shortcuts' | 'updates';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  useEscapeKey(onClose, isOpen);
   const { tracks, albums, artistProfiles, selectFolderAndScan, isScanning } = usePlayer();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const {

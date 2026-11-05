@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { usePlayer } from '../context/PlayerContext';
 import {
   searchLrcLibLyrics,
@@ -50,6 +51,7 @@ const SEARCH_MODES: SearchModeConfig[] = [
 ];
 
 export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, onClose }) => {
+  useEscapeKey(onClose, isOpen);
   const { lyricsSearchTrack, saveAndApplyLyrics, currentTrack } = usePlayer();
   const track = lyricsSearchTrack || currentTrack;
 

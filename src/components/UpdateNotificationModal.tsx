@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import {
   Sparkles,
   Download,
@@ -27,6 +28,7 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
   isOpen,
   onClose,
 }) => {
+  useEscapeKey(onClose, isOpen && updateInfo.hasUpdate);
   const [isSkipped, setIsSkipped] = useState(false);
 
   if (!isOpen || !updateInfo.hasUpdate) return null;

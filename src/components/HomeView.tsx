@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { 
   Play, 
   Pause, 
@@ -117,6 +118,7 @@ export const HomeView: React.FC = () => {
   const [isHeroAdded, setIsHeroAdded] = useState(false);
   const [isSongHeroAdded, setIsSongHeroAdded] = useState(false);
   const [selectedGenreHub, setSelectedGenreHub] = useState<MusicGenreHub | null>(null);
+  useEscapeKey(() => setSelectedGenreHub(null), selectedGenreHub !== null);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
   const [genreModalSearchQuery, setGenreModalSearchQuery] = useState('');
   const [sessionSeed, setSessionSeed] = useState<number>(() => Date.now());

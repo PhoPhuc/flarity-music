@@ -374,6 +374,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Một phần tử Audio duy nhất; useRef(new Audio()) sẽ tạo đối tượng mới mỗi lần render.
   const [audioElement] = useState(() => new Audio());
   const audioRef = useRef<HTMLAudioElement>(audioElement);
+  // Mỗi lần bấm phát tăng token này; kết quả của yêu cầu cũ (bị ngắt khi đổi bài nhanh) sẽ bị bỏ qua.
+  const playRequestRef = useRef(0);
 
   const activeTrackRef = useRef<Track | null>(null);
   const { flushTelemetry } = useAudioTelemetry({
@@ -886,9 +888,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (isMvOpenRef.current && track.hasMv && track.mvPath) {
       setIsPlaying(true);
     } else {
+      const requestId = ++playRequestRef.current;
       audio.play()
-        .then(() => setIsPlaying(true))
+        .then(() => {
+          if (playRequestRef.current === requestId) setIsPlaying(true);
+        })
         .catch(err => {
+          // Yêu cầu cũ bị ngắt bởi lần đổi bài kế tiếp: không phải lỗi, không được đổi trạng thái phát.
+          if (err?.name === 'AbortError' || playRequestRef.current !== requestId) return;
           console.error("Lỗi phát audio:", err, "URL:", fileUrl);
           setIsPlaying(false);
         });
