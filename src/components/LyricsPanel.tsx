@@ -66,7 +66,7 @@ export const LyricsPanel: React.FC = () => {
         <button
           onClick={() => void toggleFullscreen(false)}
           className="absolute top-6 right-6 z-[110] rounded-full bg-black/50 backdrop-blur-md p-3.5 text-white/80 hover:text-white hover:bg-white/20 active:scale-95 transition-all border border-white/10 shadow-2xl group cursor-pointer"
-          title="Thoát toàn màn hình (Phím Esc)"
+          title="Thoát toàn màn hình (Phím Esc)" aria-label="Thoát toàn màn hình (Phím Esc)"
         >
           <Minimize2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
         </button>
@@ -89,19 +89,19 @@ export const LyricsPanel: React.FC = () => {
                   ? 'bg-apple-pink/20 text-apple-pink'
                   : 'text-neutral-400 hover:bg-white/10 hover:text-apple-pink'
               }`}
-              title="Dịch lời bài hát (Google Dịch, Gemini, OpenAI, Claude...)"
+              title="Dịch lời bài hát (Google Dịch, Gemini, OpenAI, Claude...)" aria-label="Dịch lời bài hát (Google Dịch, Gemini, OpenAI, Claude...)"
             >
               <Languages className="w-4 h-4" />
             </button>
             <button
               onClick={() => openLyricsSearch(currentTrack)}
               className="rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-apple-pink transition-colors cursor-pointer"
-              title="Tìm lời bài hát trực tuyến (LRCLIB)"
+              title="Tìm lời bài hát trực tuyến (LRCLIB)" aria-label="Tìm lời bài hát trực tuyến (LRCLIB)"
             >
               <Search className="w-4 h-4" />
             </button>
-            <button onClick={() => void toggleFullscreen(true)} className="rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" title="Toàn màn hình (True Native Fullscreen)"><Maximize2 className="w-4 h-4" /></button>
-            <button onClick={() => setLyricsOpen(false)} className="rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" title="Đóng lời bài hát"><X className="w-4 h-4" /></button>
+            <button onClick={() => void toggleFullscreen(true)} className="rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" title="Toàn màn hình (True Native Fullscreen)" aria-label="Toàn màn hình (True Native Fullscreen)"><Maximize2 className="w-4 h-4" /></button>
+            <button onClick={() => setLyricsOpen(false)} className="rounded-lg p-2 text-neutral-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" title="Đóng lời bài hát" aria-label="Đóng lời bài hát"><X className="w-4 h-4" /></button>
           </div>
 
           <LyricsTranslationPopover

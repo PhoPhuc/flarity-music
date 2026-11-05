@@ -76,7 +76,7 @@ export const EditMetadataModal: React.FC<EditMetadataModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Chỉnh sửa thông tin" className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-lg bg-neutral-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden text-white">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">

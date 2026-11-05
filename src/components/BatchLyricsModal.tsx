@@ -202,7 +202,7 @@ export const BatchLyricsModal: React.FC<BatchLyricsModalProps> = ({ isOpen, onCl
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog" aria-modal="true" aria-label="Tải lời bài hát hàng loạt" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
       onClick={handleStopAndClose}
     >
       <div
@@ -245,7 +245,7 @@ export const BatchLyricsModal: React.FC<BatchLyricsModalProps> = ({ isOpen, onCl
           <button
             onClick={handleStopAndClose}
             className="p-2 text-neutral-400 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-            title="Đóng"
+            title="Đóng" aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>

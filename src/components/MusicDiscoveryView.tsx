@@ -676,7 +676,7 @@ export const MusicDiscoveryView: React.FC = () => {
                             <button
                               onClick={() => tauriAPI.showInExplorer(item.filePath!)}
                               className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer border border-white/5"
-                              title="Mở thư mục chứa file"
+                              title="Mở thư mục chứa file" aria-label="Mở thư mục chứa file"
                             >
                               <FolderOpen className="w-3.5 h-3.5" />
                             </button>
@@ -697,7 +697,7 @@ export const MusicDiscoveryView: React.FC = () => {
                       <button
                         onClick={() => handleRemoveFromHistory(item.id)}
                         className="p-2 rounded-xl text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                        title="Xóa khỏi lịch sử"
+                        title="Xóa khỏi lịch sử" aria-label="Xóa khỏi lịch sử"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -711,7 +711,7 @@ export const MusicDiscoveryView: React.FC = () => {
       )}
 
       {isArtistModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" aria-label="Chọn nghệ sĩ khám phá" className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-xl bg-neutral-900 border border-white/15 rounded-3xl p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <h3 className="text-base font-bold text-white">Chọn Nghệ Sĩ Khám Phá</h3>
@@ -798,7 +798,7 @@ const VerticalDiscoveryCard: React.FC<VerticalDiscoveryCardProps> = ({
           className={`absolute inset-0 transition-opacity flex items-center justify-center cursor-pointer ${
             isPreviewPlaying ? 'bg-black/60 backdrop-blur-[1px] opacity-100' : 'bg-black/40 opacity-0 group-hover:opacity-100'
           }`}
-          title={isPreviewPlaying ? 'Dừng nghe thử' : 'Nghe thử 30s'}
+          title={isPreviewPlaying ? 'Dừng nghe thử' : 'Nghe thử 30s'} aria-label={isPreviewPlaying ? 'Dừng nghe thử' : 'Nghe thử 30s'}
         >
           {isResolvingStream ? (
             <div className="w-10 h-10 rounded-full bg-apple-pink/80 text-white flex items-center justify-center shadow-lg">

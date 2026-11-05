@@ -11,6 +11,7 @@ import type { Track, Album, Playlist, ViewMode, LyricLine, ArtistProfile } from 
 import { parseLrc } from '../utils/lrcParser';
 import { convertFileSrc, tauriAPI } from '../utils/tauriBridge';
 import { useAudioTelemetry } from '../hooks/useAudioTelemetry';
+import { useToast } from '../components/ui/Toast';
 import { useTracksQuery, usePlaylistsQuery, useInvalidateMusicQueries } from '../hooks/useMusicQueries';
 import { extractArtistProfiles, groupTracksIntoUnifiedAlbums } from '../utils/artistParser';
 import { BoundedExpiringSet } from '../utils/boundedExpiringSet';
@@ -37,6 +38,8 @@ interface PlayerContextType {
   queue: Track[];
   isScanning: boolean;
   isLoadingLibrary: boolean;
+  /** true khi truy vấn thư viện đã có kết quả (hoặc đã lỗi): phân biệt "đang nạp" với "thư viện trống". */
+  hasLoadedLibrary: boolean;
   isLyricsOpen: boolean;
   newTrackIds: Set<string>;
   updatedTrackIds: Set<string>;
@@ -114,7 +117,8 @@ interface PlayerContextType {
   setSelectedAlbum: (album: Album | null) => void;
   setSelectedArtist: (artist: string | null) => void;
   setSelectedPlaylist: (playlist: Playlist | null) => void;
-  createPlaylist: (name: string, description?: string, coverArt?: string) => Promise<void>;
+  /** Trả về playlist vừa tạo, hoặc null nếu thất bại. */
+  createPlaylist: (name: string, description?: string, coverArt?: string) => Promise<Playlist | null>;
   addTrackToPlaylist: (playlistId: string, trackId: string) => Promise<void>;
   addAlbumToPlaylist: (playlistId: string, album: Album) => Promise<void>;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
@@ -185,7 +189,12 @@ declare global {
   }
 }
 
+/** Lấy thông điệp dễ đọc từ lỗi (Tauri trả lỗi dạng chuỗi, JS trả Error). */
+const errorMessage = (err: unknown): string =>
+  err instanceof Error ? err.message : typeof err === 'string' ? err : 'Lỗi không xác định';
+
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const toast = useToast();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -409,7 +418,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return extractArtistProfiles(tracks);
   }, [tracks]);
 
-  const { data: fetchedTracks } = useTracksQuery();
+  const { data: fetchedTracks, isError: tracksQueryFailed } = useTracksQuery();
+  const hasLoadedLibrary = fetchedTracks !== undefined || tracksQueryFailed;
   const { data: fetchedPlaylists } = usePlaylistsQuery();
   const { invalidateTracks, invalidateAll } = useInvalidateMusicQueries();
 
@@ -420,6 +430,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsLoadingLibrary(false);
     }
   }, [fetchedTracks]);
+
+  useEffect(() => {
+    if (tracksQueryFailed) toast.error('Không tải được thư viện nhạc. Hãy khởi động lại ứng dụng.', { durationMs: 12000 });
+  }, [tracksQueryFailed, toast]);
 
   // Đồng bộ Playlist từ CSDL
   useEffect(() => {
@@ -631,7 +645,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Quét folder chọn từ Electron IPC - Tự động phát hiện Bài Mới & Album Mới
   const selectFolderAndScan = useCallback(async () => {
     if (!window.electronAPI) {
-      alert('Tính năng quét thư mục chỉ khả dụng khi chạy trên ứng dụng Electron!');
+      toast.error('Tính năng quét thư mục chỉ khả dụng trong ứng dụng desktop.');
       return;
     }
     const folder = await window.electronAPI.selectMusicFolder();
@@ -641,63 +655,108 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const oldAlbumKeys = new Set(albums.map(a => `${a.name}-${a.artist}`));
 
     setIsScanning(true);
-    const updatedLibrary = await window.electronAPI.scanFolder(folder);
-    setIsScanning(false);
+    try {
+      const updatedLibrary = await window.electronAPI.scanFolder(folder);
 
-    if (updatedLibrary && updatedLibrary.length > 0) {
-      for (const t of updatedLibrary) {
-        if (!oldTrackIds.has(t.id)) newTracksSetRef.current.add(t.id);
-        const key = `${t.album}-${t.artist}`;
-        if (!oldAlbumKeys.has(key)) newAlbumsSetRef.current.add(key);
+      if (updatedLibrary && updatedLibrary.length > 0) {
+        let added = 0;
+        for (const t of updatedLibrary) {
+          if (!oldTrackIds.has(t.id)) {
+            newTracksSetRef.current.add(t.id);
+            added++;
+          }
+          const key = `${t.album}-${t.artist}`;
+          if (!oldAlbumKeys.has(key)) newAlbumsSetRef.current.add(key);
+        }
+
+        syncBadgesState();
+        setTracks(updatedLibrary);
+        toast.success(
+          added > 0
+            ? `Đã quét xong: thêm ${added} bài hát mới (tổng ${updatedLibrary.length} bài).`
+            : `Đã quét xong: không có bài hát mới (tổng ${updatedLibrary.length} bài).`
+        );
+      } else {
+        toast.info('Không tìm thấy file nhạc nào trong thư mục này (hỗ trợ mp3, flac, wav, m4a, aac, ogg).');
       }
-
-      syncBadgesState();
-      setTracks(updatedLibrary);
+    } catch (err) {
+      toast.error(`Không quét được thư mục: ${errorMessage(err)}`);
+    } finally {
+      setIsScanning(false);
     }
-  }, [tracks, albums, syncBadgesState]);
+  }, [tracks, albums, syncBadgesState, toast]);
 
   // PLAYLIST ACTIONS
-  const createPlaylist = useCallback(async (name: string, description?: string, coverArt?: string) => {
-    if (!window.electronAPI) return;
-    await window.electronAPI.createPlaylist(name, description, coverArt);
-    const updatedPlaylists = await window.electronAPI.getPlaylists();
-    setPlaylists(updatedPlaylists);
-  }, []);
+  const createPlaylist = useCallback(async (name: string, description?: string, coverArt?: string): Promise<Playlist | null> => {
+    if (!window.electronAPI) return null;
+    try {
+      const created = await window.electronAPI.createPlaylist(name, description, coverArt);
+      const updatedPlaylists = await window.electronAPI.getPlaylists();
+      setPlaylists(updatedPlaylists);
+      toast.success(`Đã tạo playlist "${name}".`);
+      return created ?? null;
+    } catch (err) {
+      toast.error(`Không tạo được playlist: ${errorMessage(err)}`);
+      return null;
+    }
+  }, [toast]);
 
   const addTrackToPlaylist = useCallback(async (playlistId: string, trackId: string) => {
     if (!window.electronAPI) return;
-    const updatedPlaylists = await window.electronAPI.addTrackToPlaylist(playlistId, trackId);
-    setPlaylists(updatedPlaylists);
-  }, []);
+    try {
+      const updatedPlaylists = await window.electronAPI.addTrackToPlaylist(playlistId, trackId);
+      setPlaylists(updatedPlaylists);
+      const name = updatedPlaylists.find((pl: Playlist) => pl.id === playlistId)?.name;
+      toast.success(name ? `Đã thêm vào playlist "${name}".` : 'Đã thêm vào playlist.');
+    } catch (err) {
+      toast.error(`Không thêm được vào playlist: ${errorMessage(err)}`);
+    }
+  }, [toast]);
 
   const addAlbumToPlaylist = useCallback(async (playlistId: string, album: Album) => {
     if (!window.electronAPI) return;
     // Thêm tuần tự để giữ thứ tự bài hát
-    for (const track of album.tracks) {
-      await window.electronAPI.addTrackToPlaylist(playlistId, track.id);
+    try {
+      for (const track of album.tracks) {
+        await window.electronAPI.addTrackToPlaylist(playlistId, track.id);
+      }
+      const updatedPlaylists = await window.electronAPI.getPlaylists();
+      setPlaylists(updatedPlaylists);
+      const name = updatedPlaylists.find((pl: Playlist) => pl.id === playlistId)?.name;
+      toast.success(`Đã thêm ${album.tracks.length} bài hát vào playlist${name ? ` "${name}"` : ''}.`);
+    } catch (err) {
+      toast.error(`Không thêm được album vào playlist: ${errorMessage(err)}`);
     }
-    const updatedPlaylists = await window.electronAPI.getPlaylists();
-    setPlaylists(updatedPlaylists);
-  }, []);
+  }, [toast]);
 
   const removeTrackFromPlaylist = useCallback(async (playlistId: string, trackId: string) => {
     if (!window.electronAPI) return;
-    const updatedPlaylists = await window.electronAPI.removeTrackFromPlaylist(playlistId, trackId);
-    setPlaylists(updatedPlaylists);
-  }, []);
+    try {
+      const updatedPlaylists = await window.electronAPI.removeTrackFromPlaylist(playlistId, trackId);
+      setPlaylists(updatedPlaylists);
+      toast.info('Đã gỡ bài hát khỏi playlist.');
+    } catch (err) {
+      toast.error(`Không gỡ được bài hát: ${errorMessage(err)}`);
+    }
+  }, [toast]);
 
   const deletePlaylist = useCallback(async (playlistId: string) => {
     if (!window.electronAPI) return;
-    const updatedPlaylists = await window.electronAPI.deletePlaylist(playlistId);
-    setPlaylists(updatedPlaylists);
-    setSelectedPlaylistState(prev => {
-      if (prev?.id === playlistId) {
-        setViewMode('library-tracks');
-        return null;
-      }
-      return prev;
-    });
-  }, [setViewMode]);
+    try {
+      const updatedPlaylists = await window.electronAPI.deletePlaylist(playlistId);
+      setPlaylists(updatedPlaylists);
+      setSelectedPlaylistState(prev => {
+        if (prev?.id === playlistId) {
+          setViewMode('library-tracks');
+          return null;
+        }
+        return prev;
+      });
+      toast.info('Đã xóa playlist.');
+    } catch (err) {
+      toast.error(`Không xóa được playlist: ${errorMessage(err)}`);
+    }
+  }, [setViewMode, toast]);
 
   const renamePlaylist = useCallback(async (playlistId: string, newName: string) => {
     if (!window.electronAPI) return;
@@ -745,14 +804,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // QUEUE ACTIONS
   const playNext = useCallback((track: Track) => {
-    setQueue(prev => {
-      if (!activeTrackRef.current) return prev;
-      const currentIndex = prev.findIndex(t => t.id === activeTrackRef.current!.id);
-      const newQueue = [...prev];
-      newQueue.splice(currentIndex + 1, 0, track);
-      return newQueue;
-    });
-  }, []);
+    // Chưa phát gì: đưa bài lên đầu hàng chờ (bấm Phát sẽ phát bài này đầu tiên)
+    const base = queueRef.current.filter(t => t.id !== track.id);
+    const currentIndex = activeTrackRef.current
+      ? base.findIndex(t => t.id === activeTrackRef.current!.id)
+      : -1;
+    const newQueue = [...base];
+    newQueue.splice(currentIndex + 1, 0, track);
+    queueRef.current = newQueue;
+    setQueue(newQueue);
+    toast.success(`Sẽ phát tiếp theo: "${track.title}".`);
+  }, [toast]);
 
 
 
@@ -764,16 +826,26 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteTrack = useCallback(async (trackId: string, filePath: string, permanentDelete: boolean) => {
     if (!window.electronAPI) return;
-    await window.electronAPI.deleteTrackFile(trackId, filePath, permanentDelete);
-    const freshTracks = await window.electronAPI.getSavedTracks();
-    setTracks(freshTracks);
-    setQueue(prev => prev.filter(t => t.id !== trackId));
-  }, []);
+    try {
+      await window.electronAPI.deleteTrackFile(trackId, filePath, permanentDelete);
+      const freshTracks = await window.electronAPI.getSavedTracks();
+      setTracks(freshTracks);
+      setQueue(prev => prev.filter(t => t.id !== trackId));
+      toast.success(permanentDelete ? 'Đã xóa vĩnh viễn bài hát khỏi ổ đĩa.' : 'Đã chuyển bài hát vào Thùng rác.');
+    } catch (err) {
+      toast.error(`Không xóa được bài hát: ${errorMessage(err)}`);
+    }
+  }, [toast]);
 
   const deleteAlbum = useCallback(async (album: Album, permanentDelete: boolean) => {
     if (!window.electronAPI) return;
+    let failed = 0;
     for (const t of album.tracks) {
-      await window.electronAPI.deleteTrackFile(t.id, t.filePath, permanentDelete);
+      try {
+        await window.electronAPI.deleteTrackFile(t.id, t.filePath, permanentDelete);
+      } catch {
+        failed++;
+      }
     }
     const freshTracks = await window.electronAPI.getSavedTracks();
     setTracks(freshTracks);
@@ -786,19 +858,30 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return prev;
     });
-  }, [setViewMode]);
+    const done = album.tracks.length - failed;
+    if (failed === 0) {
+      toast.success(permanentDelete ? `Đã xóa vĩnh viễn ${done} bài hát.` : `Đã chuyển ${done} bài hát vào Thùng rác.`);
+    } else {
+      toast.error(`Chỉ xóa được ${done}/${album.tracks.length} bài hát; ${failed} bài gặp lỗi.`);
+    }
+  }, [setViewMode, toast]);
 
   const updateTrackMetadata = useCallback(async (trackId: string, updates: any) => {
     if (!window.electronAPI) return;
-    await window.electronAPI.updateTrackMetadata(trackId, updates);
-    const freshTracks = await window.electronAPI.getSavedTracks();
-    setTracks(freshTracks);
-    setUpdatedTrackIds(prev => new Set([...prev, trackId]));
-    if (updates.album || updates.artist) {
-      const targetKey = `${updates.album || ''}-${updates.artist || ''}`;
-      if (targetKey !== '-') setUpdatedAlbumKeys(prev => new Set([...prev, targetKey]));
+    try {
+      await window.electronAPI.updateTrackMetadata(trackId, updates);
+      const freshTracks = await window.electronAPI.getSavedTracks();
+      setTracks(freshTracks);
+      setUpdatedTrackIds(prev => new Set([...prev, trackId]));
+      if (updates.album || updates.artist) {
+        const targetKey = `${updates.album || ''}-${updates.artist || ''}`;
+        if (targetKey !== '-') setUpdatedAlbumKeys(prev => new Set([...prev, targetKey]));
+      }
+      toast.success('Đã lưu thông tin bài hát.');
+    } catch (err) {
+      toast.error(`Không lưu được thông tin: ${errorMessage(err)}`);
     }
-  }, []);
+  }, [toast]);
 
   // Audio Event Listeners – dùng refs để tránh re-register khi state thay đổi
   // nextTrack cần được define trước
@@ -1195,7 +1278,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [playTrack]);
 
   const seek = useCallback((seconds: number) => {
-    void flushTelemetry('seeking');
+    // Ghi lại thời gian đã nghe nhưng KHÔNG tạm dừng bộ đếm (audio vẫn đang phát sau khi tua).
+    void tauriAPI.telemetryFlush();
     audioRef.current.currentTime = seconds;
     setCurrentTime(seconds);
   }, [flushTelemetry]);
@@ -1302,7 +1386,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev?.id === trackId ? { ...prev, hasMv: true, mvPath: mvFilePath } : prev
     );
     setUpdatedTrackIds(prev => new Set([...prev, trackId]));
-  }, []);
+    toast.success('Đã gán file MV cho bài hát.');
+  }, [toast]);
 
   const attachLrcToTrack = useCallback(async (trackId: string) => {
     if (!window.electronAPI) return;
@@ -1332,7 +1417,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return prev;
     });
-  }, []);
+    toast.success('Đã gán file lời (.lrc) cho bài hát.');
+  }, [toast]);
 
   const saveAndApplyLyrics = useCallback(async (trackId: string, lrcContent: string) => {
     if (!window.electronAPI) return;
@@ -1368,20 +1454,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setCurrentTrack(prev => prev ? { ...prev, hasLyric: true } : prev);
       }
     }
-  }, []);
+    toast.success('Đã lưu lời bài hát.');
+  }, [toast]);
 
   const addToQueueOrPlay = useCallback((track: Track) => {
     if (queueRef.current.length === 0 && !activeTrackRef.current) {
       playTrack(track);
+    } else if (queueRef.current.some(t => t.id === track.id)) {
+      toast.info(`"${track.title}" đã có trong hàng chờ.`);
     } else {
-      setQueue(prev => {
-        if (prev.some(t => t.id === track.id)) return prev;
-        const updated = [...prev, track];
-        queueRef.current = updated;
-        return updated;
-      });
+      const updated = [...queueRef.current, track];
+      queueRef.current = updated;
+      setQueue(updated);
+      toast.success(`Đã thêm "${track.title}" vào hàng chờ.`);
     }
-  }, [playTrack]);
+  }, [playTrack, toast]);
 
   const addMultipleToQueue = useCallback((newTracks: Track[]) => {
     if (!newTracks || newTracks.length === 0) return;
@@ -1437,6 +1524,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         queue,
         isScanning,
         isLoadingLibrary,
+        hasLoadedLibrary,
         isLyricsOpen,
         newTrackIds,
         updatedTrackIds,

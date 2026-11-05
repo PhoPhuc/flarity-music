@@ -772,7 +772,7 @@ export const HomeView: React.FC = () => {
                 <button
                   onClick={handleHeroPlay}
                   className="h-12 px-6 rounded-full bg-gradient-to-r from-[#FA243C] to-[#E01E37] hover:brightness-110 text-white flex items-center justify-center gap-2 shadow-[0_8px_25px_rgba(250,36,60,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold text-xs"
-                  title={isHeroTrackPlaying ? "Tạm dừng" : "Phát toàn bộ album"}
+                  title={isHeroTrackPlaying ? "Tạm dừng" : "Phát toàn bộ album"} aria-label={isHeroTrackPlaying ? "Tạm dừng" : "Phát toàn bộ album"}
                 >
                   {isHeroTrackPlaying ? (
                     <>
@@ -791,7 +791,7 @@ export const HomeView: React.FC = () => {
                 <button
                   onClick={handleHeroShuffle}
                   className="w-12 h-12 rounded-full border border-white/15 hover:border-white/30 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 bg-white/5 hover:bg-white/10 shadow-md backdrop-blur-md"
-                  title="Phát ngẫu nhiên album"
+                  title="Phát ngẫu nhiên album" aria-label="Phát ngẫu nhiên album"
                 >
                   <Shuffle className="w-4 h-4" />
                 </button>
@@ -804,7 +804,7 @@ export const HomeView: React.FC = () => {
                       ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                       : 'border-white/15 hover:border-white/30 text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10'
                   }`}
-                  title="Thêm vào hàng đợi"
+                  title="Thêm vào hàng đợi" aria-label="Thêm vào hàng đợi"
                 >
                   {isHeroAdded ? <Check className="w-4 h-4 text-emerald-400" /> : <Plus className="w-4 h-4" />}
                 </button>
@@ -876,7 +876,7 @@ export const HomeView: React.FC = () => {
                         ? 'opacity-100 scale-100'
                         : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
                     }`}
-                    title={isThisPlaying ? "Tạm dừng" : "Phát"}
+                    title={isThisPlaying ? "Tạm dừng" : "Phát"} aria-label={isThisPlaying ? "Tạm dừng" : "Phát"}
                   >
                     {isThisPlaying ? (
                       <Pause className="w-4 h-4 fill-current" />
@@ -1000,7 +1000,7 @@ export const HomeView: React.FC = () => {
                     setTimeout(() => setIsSongHeroAdded(false), 2000);
                   }}
                   className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer active:scale-95 border border-white/10"
-                  title="Thêm vào hàng đợi"
+                  title="Thêm vào hàng đợi" aria-label="Thêm vào hàng đợi"
                 >
                   {isSongHeroAdded ? <Check className="w-4 h-4 text-emerald-400" /> : <Plus className="w-4 h-4" />}
                 </button>
@@ -1062,7 +1062,7 @@ export const HomeView: React.FC = () => {
                           ? 'opacity-100 scale-100'
                           : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
                       }`}
-                      title={isThisPlaying ? "Tạm dừng" : "Phát"}
+                      title={isThisPlaying ? "Tạm dừng" : "Phát"} aria-label={isThisPlaying ? "Tạm dừng" : "Phát"}
                     >
                       {isThisPlaying ? (
                         <Pause className="w-4 h-4 fill-current" />
@@ -1174,7 +1174,7 @@ export const HomeView: React.FC = () => {
                         ? 'opacity-100 scale-100'
                         : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
                     }`}
-                    title={isThisPlaying ? "Tạm dừng" : "Phát"}
+                    title={isThisPlaying ? "Tạm dừng" : "Phát"} aria-label={isThisPlaying ? "Tạm dừng" : "Phát"}
                   >
                     {isThisPlaying ? (
                       <Pause className="w-4 h-4 fill-current" />
@@ -1258,7 +1258,7 @@ export const HomeView: React.FC = () => {
                         ? 'opacity-100 scale-100'
                         : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
                     }`}
-                    title={isThisPlaying ? "Tạm dừng" : "Phát"}
+                    title={isThisPlaying ? "Tạm dừng" : "Phát"} aria-label={isThisPlaying ? "Tạm dừng" : "Phát"}
                   >
                     {isThisPlaying ? (
                       <Pause className="w-4 h-4 fill-current" />
@@ -1400,7 +1400,7 @@ export const HomeView: React.FC = () => {
                         ? 'opacity-100 scale-100'
                         : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
                     }`}
-                    title={isThisPlaying ? "Tạm dừng" : "Phát"}
+                    title={isThisPlaying ? "Tạm dừng" : "Phát"} aria-label={isThisPlaying ? "Tạm dừng" : "Phát"}
                   >
                     {isThisPlaying ? (
                       <Pause className="w-4 h-4 fill-current" />
@@ -1505,7 +1505,7 @@ export const HomeView: React.FC = () => {
                 )}
                 <button
                   className="absolute right-2 bottom-2 w-9 h-9 rounded-full bg-apple-pink text-white flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
-                  title="Phát Album"
+                  title="Phát Album" aria-label="Phát Album"
                 >
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 </button>
@@ -1563,7 +1563,7 @@ export const HomeView: React.FC = () => {
                     if (plTracks.length > 0) playTrack(plTracks[0], plTracks);
                   }}
                   className="absolute right-2 bottom-2 w-9 h-9 rounded-full bg-apple-pink text-white flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
-                  title="Phát Danh sách"
+                  title="Phát Danh sách" aria-label="Phát Danh sách"
                 >
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 </button>
@@ -1682,7 +1682,7 @@ export const HomeView: React.FC = () => {
             <button
               onClick={handleRefreshHomeDiscovery}
               className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer ml-1 border border-white/5"
-              title="Đổi bộ gợi ý ngẫu nhiên trên trang chủ"
+              title="Đổi bộ gợi ý ngẫu nhiên trên trang chủ" aria-label="Đổi bộ gợi ý ngẫu nhiên trên trang chủ"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
@@ -1703,7 +1703,7 @@ export const HomeView: React.FC = () => {
             <button
               onClick={() => setHomeSearchQuery('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-              title="Xóa tìm kiếm"
+              title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -1798,7 +1798,7 @@ export const HomeView: React.FC = () => {
                                 ? 'bg-apple-pink text-white opacity-100 scale-100 shadow-md shadow-apple-pink/40'
                                 : 'bg-white/10 hover:bg-apple-pink hover:text-white text-neutral-300 opacity-0 group-hover:opacity-100 hover:scale-105'
                             }`}
-                            title={isThisPlaying ? 'Tạm dừng' : 'Phát'}
+                            title={isThisPlaying ? 'Tạm dừng' : 'Phát'} aria-label={isThisPlaying ? 'Tạm dừng' : 'Phát'}
                           >
                             {isThisPlaying ? (
                               <Pause className="w-3.5 h-3.5 fill-current" />
@@ -1959,7 +1959,7 @@ export const HomeView: React.FC = () => {
                       ? 'opacity-100 scale-100' 
                       : 'opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-105'
                   }`}
-                  title={isPlayingThis ? "Tạm dừng" : "Phát"}
+                  title={isPlayingThis ? "Tạm dừng" : "Phát"} aria-label={isPlayingThis ? "Tạm dừng" : "Phát"}
                 >
                   {isPlayingThis ? (
                     <Pause className="w-4 h-4 fill-current" />
@@ -2073,7 +2073,7 @@ export const HomeView: React.FC = () => {
         const durationText = hours > 0 ? `${hours} giờ ${mins} phút` : `${mins} phút`;
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none animate-in fade-in duration-200">
+          <div role="dialog" aria-modal="true" aria-label="Chi tiết thể loại" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none animate-in fade-in duration-200">
             {/* Backdrop */}
             <div
               onClick={() => { setSelectedGenreHub(null); setGenreModalSearchQuery(''); }}
@@ -2133,7 +2133,7 @@ export const HomeView: React.FC = () => {
                   <button
                     onClick={() => { setSelectedGenreHub(null); setGenreModalSearchQuery(''); }}
                     className="p-3 rounded-full bg-black/40 hover:bg-black/60 text-white border border-white/10 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                    title="Đóng"
+                    title="Đóng" aria-label="Đóng"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -2159,7 +2159,7 @@ export const HomeView: React.FC = () => {
                     <button
                       onClick={() => setGenreModalSearchQuery('')}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 rounded-md hover:bg-white/10 transition-colors"
-                      title="Xóa tìm kiếm"
+                      title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -2300,7 +2300,7 @@ export const HomeView: React.FC = () => {
                                     ? 'bg-apple-pink text-white opacity-100 scale-100 shadow-md shadow-apple-pink/40'
                                     : 'bg-white/10 hover:bg-apple-pink hover:text-white text-neutral-300 opacity-0 group-hover:opacity-100 hover:scale-105'
                                 }`}
-                                title={isThisPlaying ? 'Tạm dừng' : 'Phát'}
+                                title={isThisPlaying ? 'Tạm dừng' : 'Phát'} aria-label={isThisPlaying ? 'Tạm dừng' : 'Phát'}
                               >
                                 {isThisPlaying ? (
                                   <Pause className="w-3.5 h-3.5 fill-current" />

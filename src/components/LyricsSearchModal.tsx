@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useToast } from './ui/Toast';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import { usePlayer } from '../context/PlayerContext';
 import {
@@ -53,6 +54,7 @@ const SEARCH_MODES: SearchModeConfig[] = [
 export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, onClose }) => {
   useEscapeKey(onClose, isOpen);
   const { lyricsSearchTrack, saveAndApplyLyrics, currentTrack } = usePlayer();
+  const toast = useToast();
   const track = lyricsSearchTrack || currentTrack;
 
   const [mode, setMode] = useState<LrcSearchMode>('auto');
@@ -146,7 +148,7 @@ export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, on
       }, 700);
     } catch (err) {
       console.error('[LyricsSearch] Error saving lyrics:', err);
-      alert('Đã xảy ra lỗi khi lưu file lời bài hát!');
+      toast.error('Không lưu được file lời bài hát. Hãy thử lại.');
     } finally {
       setSavingId(null);
     }
@@ -167,7 +169,7 @@ export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, on
   if (!isOpen || !track) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Tìm lời bài hát" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-in fade-in duration-200">
       <div
         className="relative flex flex-col w-full max-w-4xl max-h-[90vh] bg-neutral-900/95 border border-white/15 rounded-3xl shadow-2xl overflow-hidden select-none animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -209,7 +211,7 @@ export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, on
           <button
             onClick={onClose}
             className="p-2 text-neutral-400 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-            title="Đóng"
+            title="Đóng" aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
@@ -254,7 +256,7 @@ export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, on
                 <button
                   onClick={() => setCustomQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
-                  title="Xóa tìm kiếm"
+                  title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -407,7 +409,7 @@ export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, on
                             ? 'bg-apple-pink hover:bg-apple-pinkHover shadow-apple-pink/30'
                             : 'bg-neutral-800 hover:bg-apple-pink border border-white/10'
                         }`}
-                        title="Tự động tải về, lưu file .lrc và áp dụng cho bài hát"
+                        title="Tự động tải về, lưu file .lrc và áp dụng cho bài hát" aria-label="Tự động tải về, lưu file .lrc và áp dụng cho bài hát"
                       >
                         {isSaving ? (
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -444,7 +446,7 @@ export const LyricsSearchModal: React.FC<LyricsSearchModalProps> = ({ isOpen, on
                   <button
                     onClick={() => setPreviewItem(null)}
                     className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-white/10"
-                    title="Đóng xem trước"
+                    title="Đóng xem trước" aria-label="Đóng xem trước"
                   >
                     <X className="w-4 h-4" />
                   </button>

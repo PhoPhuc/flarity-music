@@ -118,11 +118,12 @@ export const PlayerBar: React.FC<{
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={togglePlayPause}
+              aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
               className="w-10 h-10 bg-apple-pink rounded-full flex items-center justify-center text-white shadow-md active:scale-95 transition-transform"
             >
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </button>
-            <button onClick={nextTrack} className="p-2 text-neutral-300 hover:text-white active:scale-95">
+            <button onClick={nextTrack} aria-label="Bài kế tiếp" className="p-2 text-neutral-300 hover:text-white active:scale-95">
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
           </div>
@@ -192,7 +193,7 @@ export const PlayerBar: React.FC<{
                       openAudioQualityModal(currentTrack, b.id);
                     }}
                     className={`px-2.5 py-1 rounded-lg border font-black text-[11px] uppercase tracking-wider shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all ${b.style}`}
-                    title="Nhấn để xem chi tiết chuẩn âm thanh"
+                    title="Nhấn để xem chi tiết chuẩn âm thanh" aria-label="Nhấn để xem chi tiết chuẩn âm thanh"
                   >
                     {b.isDolby ? <Sparkles className="w-3.5 h-3.5 animate-pulse" /> : <Disc className="w-3.5 h-3.5" />}
                     <span>{b.label}</span>
@@ -210,6 +211,8 @@ export const PlayerBar: React.FC<{
                 step={0.1}
                 value={currentTime}
                 onChange={handleSeekChange}
+                aria-label="Thanh tua bài hát"
+                aria-valuetext={`${formatTime(currentTime)} trên ${formatTime(duration)}`}
                 className="w-full h-2 bg-neutral-800 accent-apple-pink rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-xs text-neutral-400 font-medium">
@@ -299,7 +302,7 @@ export const PlayerBar: React.FC<{
             <button 
               onClick={toggleShuffle}
               className={`transition-colors ${shuffle ? 'text-apple-pink' : 'text-neutral-400 hover:text-white'}`}
-              title="Phát ngẫu nhiên"
+              title="Phát ngẫu nhiên" aria-label="Phát ngẫu nhiên" aria-pressed={shuffle}
             >
               <Shuffle className="w-4 h-4" />
             </button>
@@ -307,7 +310,7 @@ export const PlayerBar: React.FC<{
             <button 
               onClick={prevTrack} 
               className="text-neutral-200 hover:text-white transition-all active:scale-95"
-              title="Bài trước đó"
+              title="Bài trước đó" aria-label="Bài trước đó"
             >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
@@ -315,7 +318,7 @@ export const PlayerBar: React.FC<{
             <button 
               onClick={togglePlayPause} 
               className="w-9 h-9 rounded-full bg-white hover:scale-105 text-black flex items-center justify-center transition-all shadow-md active:scale-95"
-              title={isPlaying ? "Tạm dừng" : "Phát"}
+              title={isPlaying ? "Tạm dừng" : "Phát"} aria-label={isPlaying ? "Tạm dừng" : "Phát"}
             >
               {isPlaying ? (
                 <Pause className="w-5 h-5 fill-current" />
@@ -327,7 +330,7 @@ export const PlayerBar: React.FC<{
             <button 
               onClick={nextTrack} 
               className="text-neutral-200 hover:text-white transition-all active:scale-95"
-              title="Bài kế tiếp"
+              title="Bài kế tiếp" aria-label="Bài kế tiếp"
             >
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
@@ -335,7 +338,7 @@ export const PlayerBar: React.FC<{
             <button 
               onClick={toggleRepeat}
               className={`transition-colors ${repeat !== 'off' ? 'text-apple-pink' : 'text-neutral-400 hover:text-white'}`}
-              title={repeat === 'one' ? 'Lặp lại 1 bài' : repeat === 'all' ? 'Lặp lại tất cả' : 'Không lặp lại'}
+              title={repeat === 'one' ? 'Lặp lại 1 bài' : repeat === 'all' ? 'Lặp lại tất cả' : 'Không lặp lại'} aria-label={repeat === 'one' ? 'Lặp lại 1 bài' : repeat === 'all' ? 'Lặp lại tất cả' : 'Không lặp lại'}
             >
               {repeat === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
             </button>
@@ -346,7 +349,7 @@ export const PlayerBar: React.FC<{
               {formatTime(currentTime)}
             </span>
             <div className="relative flex-1 flex items-center group h-4 cursor-pointer">
-              <div className="w-full h-1.5 bg-white/10 group-hover:h-2 rounded-full overflow-hidden transition-all duration-150 relative">
+              <div className="w-full h-1.5 bg-white/10 group-hover:h-2 rounded-full overflow-hidden transition-all duration-150 relative group-has-[:focus-visible]:ring-2 group-has-[:focus-visible]:ring-apple-pink">
                 <div 
                   className="h-full bg-apple-pink rounded-full transition-all duration-75"
                   style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
@@ -359,6 +362,8 @@ export const PlayerBar: React.FC<{
                 step={0.1}
                 value={currentTime}
                 onChange={handleSeekChange}
+                aria-label="Thanh tua bài hát"
+                aria-valuetext={`${formatTime(currentTime)} trên ${formatTime(duration)}`}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
             </div>
@@ -377,7 +382,7 @@ export const PlayerBar: React.FC<{
                   key={b.id}
                   onClick={() => openAudioQualityModal(currentTrack, b.id)}
                   className={`px-2 py-0.5 rounded-lg border font-black text-[10px] uppercase tracking-wider shadow-sm flex items-center gap-1 cursor-pointer transition-all duration-200 hover:scale-105 hover:brightness-125 active:scale-95 animate-in fade-in ${b.style}`}
-                  title={`Nhấn để xem chi tiết chuẩn âm thanh ${b.label}`}
+                  title={`Nhấn để xem chi tiết chuẩn âm thanh ${b.label}`} aria-label={`Nhấn để xem chi tiết chuẩn âm thanh ${b.label}`}
                 >
                   {b.isDolby ? (
                     <Sparkles className="w-3 h-3 text-purple-300 animate-pulse" />
@@ -408,7 +413,7 @@ export const PlayerBar: React.FC<{
                 ? 'bg-apple-pink/20 text-apple-pink' 
                 : 'text-neutral-400 hover:text-white hover:bg-white/5'
             }`}
-            title="Lời bài hát"
+            title="Lời bài hát" aria-label="Lời bài hát" aria-pressed={isLyricsOpen}
           >
             <Mic2 className="w-4 h-4" />
           </button>
@@ -420,17 +425,17 @@ export const PlayerBar: React.FC<{
                 ? 'bg-apple-pink/20 text-apple-pink' 
                 : 'text-neutral-400 hover:text-white hover:bg-white/5'
             }`}
-            title="Danh sách chờ"
+            title="Danh sách chờ" aria-label="Danh sách chờ" aria-pressed={isQueueOpen}
           >
             <ListMusic className="w-4 h-4" />
           </button>
 
           <div className="flex items-center gap-2 group min-w-[110px]">
-            <button onClick={toggleMute} className="text-neutral-400 hover:text-white p-1">
+            <button onClick={toggleMute} className="text-neutral-400 hover:text-white p-1" title={isMuted ? "Bật tiếng" : "Tắt tiếng"} aria-label={isMuted ? "Bật tiếng" : "Tắt tiếng"}>
               {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             <div className="relative flex-1 flex items-center h-4 cursor-pointer">
-              <div className="w-full h-1.5 bg-white/10 group-hover:h-2 rounded-full overflow-hidden transition-all duration-150">
+              <div className="w-full h-1.5 bg-white/10 group-hover:h-2 rounded-full overflow-hidden transition-all duration-150 group-has-[:focus-visible]:ring-2 group-has-[:focus-visible]:ring-apple-pink">
                 <div 
                   className="h-full bg-white group-hover:bg-apple-pink rounded-full transition-all duration-75"
                   style={{ width: `${isMuted ? 0 : volume * 100}%` }}
@@ -443,6 +448,8 @@ export const PlayerBar: React.FC<{
                 step={0.01}
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
+                aria-label="Âm lượng"
+                aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
             </div>

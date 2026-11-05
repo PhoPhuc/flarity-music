@@ -37,7 +37,7 @@ export const MoveAlbumModal: React.FC<MoveAlbumModalProps> = ({ sourceAlbum, onC
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Chuyển album" className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-neutral-900 border border-white/10 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
         
         {/* Header */}

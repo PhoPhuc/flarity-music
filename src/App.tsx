@@ -18,6 +18,10 @@ import { LyricsSearchModal } from './components/LyricsSearchModal';
 import { BatchLyricsModal } from './components/BatchLyricsModal';
 import { UpdateNotificationModal } from './components/UpdateNotificationModal';
 import { UpdateToast } from './components/UpdateToast';
+import { ToastProvider, useToast } from './components/ui/Toast';
+import { DialogProvider } from './components/ui/Dialog';
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
+import { LibraryGate } from './components/LibraryGate';
 import { useAppUpdater } from './hooks/useAppUpdater';
 import { NavigationHeader } from './components/NavigationHeader';
 import type { Album, Track } from './types';
@@ -103,6 +107,7 @@ const CollectionHeader: React.FC<{
 };
 
 const MainContent: React.FC = () => {
+  useGlobalShortcuts();
   const {
     viewMode,
     albums,
@@ -178,6 +183,10 @@ const MainContent: React.FC = () => {
     setEditModal({ isOpen: true, type, data });
   };
 
+  // Các màn hình thư viện cần có dữ liệu: khi đang nạp hoặc chưa có bài nào thì hiện hướng dẫn thay vì trang rỗng
+  const showLibraryGate =
+    ['home', 'library-tracks', 'library-albums', 'library-artists'].includes(viewMode) && tracks.length === 0;
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden relative">
       <div className="flex flex-1 min-h-0">
@@ -186,7 +195,9 @@ const MainContent: React.FC = () => {
           <NavigationHeader />
           <div className="flex-1 overflow-y-auto pb-24 min-w-0">
             <Suspense fallback={<ViewFallback />}>
-          {viewMode === 'home' ? (
+          {showLibraryGate ? (
+            <LibraryGate />
+          ) : viewMode === 'home' ? (
             <HomeView />
           ) : viewMode === 'discovery' ? (
             <MusicDiscoveryView />
@@ -265,7 +276,7 @@ const MainContent: React.FC = () => {
                     <button
                       onClick={() => setArtistSearchQuery('')}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
-                      title="Xóa tìm kiếm"
+                      title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -316,7 +327,7 @@ const MainContent: React.FC = () => {
             selectedPlaylist ? (
               <>
                 <CollectionHeader kind="Playlist" title={selectedPlaylist.name} subtitle="Playlist của bạn" tracks={tracks.filter(t => selectedPlaylist.trackIds.includes(t.id))} cover={selectedPlaylist.coverArt} />
-                <TrackList tracks={tracks.filter(t => selectedPlaylist.trackIds.includes(t.id))} onOpenMvForTrack={(track) => openMv(track)} onContextMenu={handleTrackContextMenu} />
+                <TrackList tracks={tracks.filter(t => selectedPlaylist.trackIds.includes(t.id))} onOpenMvForTrack={(track) => openMv(track)} onContextMenu={handleTrackContextMenu} emptyMessage="Playlist này chưa có bài hát. Nhấp chuột phải vào một bài hát và chọn “Thêm Vào Playlist”." />
               </>
             ) : (
               <div className="p-8 text-center text-neutral-400">
@@ -415,16 +426,17 @@ const MainContent: React.FC = () => {
 
 const AppContent: React.FC = () => {
   // Cảnh báo khi app đang chạy bằng DB tạm (không mở được file DB thật): dữ liệu sẽ không được lưu.
+  const toast = useToast();
   useEffect(() => {
     void tauriAPI
       .getDbStatus()
       .then((persistent) => {
         if (persistent === false) {
-          window.alert('Không mở được cơ sở dữ liệu. Thư viện và lịch sử nghe sẽ không được lưu trong phiên này. Hãy khởi động lại app.');
+          toast.error('Không mở được cơ sở dữ liệu: thư viện và lịch sử nghe sẽ không được lưu trong phiên này. Hãy khởi động lại app.', { durationMs: 30000 });
         }
       })
       .catch(() => undefined);
-  }, []);
+  }, [toast]);
 
   console.log(">>> [FE STEP 2] App Component Rendered");
   const { isLoadingLibrary, setViewMode } = usePlayer();
@@ -487,9 +499,13 @@ const AppContent: React.FC = () => {
 
 export function App() {
   return (
-    <PlayerProvider>
-      <AppContent />
-    </PlayerProvider>
+    <ToastProvider>
+      <DialogProvider>
+        <PlayerProvider>
+          <AppContent />
+        </PlayerProvider>
+      </DialogProvider>
+    </ToastProvider>
   );
 }
 
