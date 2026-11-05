@@ -1,0 +1,14 @@
+# Copy to .cargo/config.toml (git-ignored) and adjust the paths for your machine.
+# The repository no longer hard-codes a target or any personal toolchain path.
+#
+# Windows GNU build with LLVM-MinGW (example):
+#
+# [build]
+# target = "x86_64-pc-windows-gnu"
+#
+# [target.x86_64-pc-windows-gnu]
+# linker = "C:\\path\\to\\llvm-mingw\\bin\\clang.exe"
+# ar = "C:\\path\\to\\llvm-mingw\\bin\\llvm-ar.exe"
+# rustflags = ["-C", "link-arg=--target=x86_64-w64-mingw32", "-C", "link-arg=-fuse-ld=lld"]
+#
+# Android: `tauri android build` configures the NDK linkers itself; no entries are needed here.

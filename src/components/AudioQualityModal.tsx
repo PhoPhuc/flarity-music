@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { Track } from '../types';
 import {
   AUDIO_STANDARDS,
-  AudioStandardId,
+  type AudioStandardId,
   analyzeTrackAudio,
-  AudioStandard,
+  type AudioStandard,
 } from '../utils/audioTech';
 import {
   X,

@@ -4,14 +4,32 @@ use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
 use lofty::tag::Accessor;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
 pub struct DbState(pub std::sync::Arc<std::sync::Mutex<rusqlite::Connection>>);
 pub struct TelemetryState(pub std::sync::Arc<std::sync::Mutex<crate::telemetry::TelemetryEngine>>);
+
+/// false khi app đang chạy bằng DB tạm (không mở được file DB thật).
+pub struct DbStatus {
+    pub persistent: bool,
+}
+
+#[tauri::command]
+pub fn get_db_status(state: State<'_, DbStatus>) -> bool {
+    state.persistent
+}
+
+/// Escape cho yt-dlp output template: `%` trong đường dẫn thư mục phải thành `%%`.
+fn yt_template(dir: &Path, file_name: &str) -> String {
+    let dir_esc = dir.to_string_lossy().replace('%', "%%");
+    Path::new(&dir_esc).join(file_name).to_string_lossy().to_string()
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,13 +64,55 @@ pub async fn telemetry_on_play(telemetry_state: State<'_, TelemetryState>) -> Re
     Ok(true)
 }
 
+fn write_flush_payload(
+    db: &Arc<Mutex<rusqlite::Connection>>,
+    payload: Option<crate::telemetry::TelemetryFlushPayload>,
+) -> Result<(), String> {
+    if let Some(p) = payload {
+        let mut conn = db.lock().map_err(|e| e.to_string())?;
+        crate::telemetry::write_telemetry_flush_to_db(&mut conn, p).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Pause: cộng dồn thời gian rồi GHI NGAY xuống DB (trước đây chỉ ghi khi đổi bài/thoát).
 #[tauri::command]
 pub async fn telemetry_on_pause(
+    db_state: State<'_, DbState>,
     telemetry_state: State<'_, TelemetryState>,
 ) -> Result<bool, String> {
     let telemetry = telemetry_state.0.clone();
-    let mut engine = telemetry.lock().map_err(|e| e.to_string())?;
-    engine.on_pause();
+    let db = db_state.0.clone();
+    tokio::task::spawn_blocking(move || {
+        let payload = {
+            let mut engine = telemetry.lock().map_err(|e| e.to_string())?;
+            engine.on_pause();
+            engine.extract_flush_payload()
+        };
+        write_flush_payload(&db, payload)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    Ok(true)
+}
+
+/// Heartbeat khi đang phát: ghi thời gian đã nghe mà không dừng bộ đếm (giảm mất dữ liệu khi crash).
+#[tauri::command]
+pub async fn telemetry_flush(
+    db_state: State<'_, DbState>,
+    telemetry_state: State<'_, TelemetryState>,
+) -> Result<bool, String> {
+    let telemetry = telemetry_state.0.clone();
+    let db = db_state.0.clone();
+    tokio::task::spawn_blocking(move || {
+        let payload = {
+            let mut engine = telemetry.lock().map_err(|e| e.to_string())?;
+            engine.extract_flush_payload()
+        };
+        write_flush_payload(&db, payload)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     Ok(true)
 }
 
@@ -402,13 +462,18 @@ pub fn show_in_explorer(file_path: String) -> Result<bool, String> {
         #[cfg(target_os = "windows")]
         {
             let _ = std::process::Command::new("explorer")
-                .arg("/select,")
-                .arg(&file_path)
+                .arg(format!("/select,{}", file_path))
                 .spawn();
         }
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "macos")]
         {
-            let _ = open::that(&file_path);
+            let _ = std::process::Command::new("open").arg("-R").arg(&file_path).spawn();
+        }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        {
+            if let Some(dir) = Path::new(&file_path).parent() {
+                let _ = open::that(dir);
+            }
         }
         Ok(true)
     } else {
@@ -419,32 +484,13 @@ pub fn show_in_explorer(file_path: String) -> Result<bool, String> {
 #[tauri::command]
 pub fn open_external_url(app: AppHandle, url: String) -> Result<bool, String> {
     use tauri_plugin_opener::OpenerExt;
-    if let Ok(_) = app.opener().open_url(&url, None::<&str>) {
-        return Ok(true);
+    if !crate::security::is_allowed_external_url(&url) {
+        return Err("Chỉ mở được liên kết http/https".to_string());
     }
-    #[cfg(target_os = "windows")]
-    {
-        let _ = std::process::Command::new("cmd")
-            .args(["/C", "start", "", &url])
-            .spawn();
-        return Ok(true);
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let _ = std::process::Command::new("open")
-            .arg(&url)
-            .spawn();
-        return Ok(true);
-    }
-    #[cfg(target_os = "linux")]
-    {
-        let _ = std::process::Command::new("xdg-open")
-            .arg(&url)
-            .spawn();
-        return Ok(true);
-    }
-    #[allow(unreachable_code)]
-    Ok(false)
+    app.opener()
+        .open_url(url.trim(), None::<&str>)
+        .map_err(|e| e.to_string())?;
+    Ok(true)
 }
 
 #[tauri::command]
@@ -455,8 +501,15 @@ pub fn delete_track_file(
     permanent_delete: bool,
 ) -> Result<bool, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
-    db::delete_track_db(&conn, &track_id).map_err(|e| e.to_string())?;
+    // Chỉ xóa file đúng với bản ghi của track_id (tránh xóa nhầm đường dẫn tùy ý từ giao diện)
+    let target = db::get_track_by_id(&conn, &track_id).map_err(|e| e.to_string())?;
+    match target {
+        Some(t) if t.file_path == file_path => {}
+        Some(_) => return Err("Đường dẫn không khớp với bài hát trong thư viện".to_string()),
+        None => return Err("Bài hát không còn trong thư viện".to_string()),
+    }
 
+    // Xóa file TRƯỚC; nếu thất bại thì giữ nguyên bản ghi DB.
     if Path::new(&file_path).exists() {
         if permanent_delete {
             fs::remove_file(&file_path).map_err(|e| e.to_string())?;
@@ -464,6 +517,7 @@ pub fn delete_track_file(
             trash::delete(&file_path).map_err(|e| e.to_string())?;
         }
     }
+    db::delete_track_db(&conn, &track_id).map_err(|e| e.to_string())?;
     Ok(true)
 }
 
@@ -478,13 +532,27 @@ pub struct UpdateMetadataInput {
     pub move_file: Option<bool>,
 }
 
+/// Di chuyển file .lrc/.mv đi kèm nếu nó nằm cùng thư mục với file audio cũ.
+fn move_companion(old_path: Option<&str>, old_audio_dir: Option<&Path>, new_dir: &Path) -> Option<String> {
+    let old = Path::new(old_path?);
+    if old.parent() != old_audio_dir || !old.exists() {
+        return None;
+    }
+    let dest = new_dir.join(old.file_name()?);
+    if dest.exists() {
+        return None;
+    }
+    fs::rename(old, &dest).ok()?;
+    Some(dest.to_string_lossy().to_string())
+}
+
 #[tauri::command]
 pub fn update_track_metadata(
     state: State<'_, DbState>,
     track_id: String,
     updates: UpdateMetadataInput,
 ) -> Result<bool, String> {
-    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
     let target = db::get_track_by_id(&conn, &track_id).map_err(|e| e.to_string())?;
 
     let target = match target {
@@ -492,35 +560,32 @@ pub fn update_track_metadata(
         None => return Ok(false),
     };
 
-    let mut new_file_path = target.file_path.clone();
+    let mut moved: Option<(String, Option<String>, Option<String>)> = None;
 
     if updates.move_file.unwrap_or(false) && (updates.artist.is_some() || updates.album.is_some()) {
         let current_path = Path::new(&target.file_path);
-        if let Some(current_dir) = current_path.parent() {
-            if let Some(music_base_dir) = current_dir.parent().and_then(|p| p.parent()) {
-                let artist_val = updates.artist.as_deref().unwrap_or(&target.artist);
-                let album_val = updates.album.as_deref().unwrap_or(&target.album);
+        let new_artist = sanitize_filename(updates.artist.as_deref().unwrap_or(&target.artist));
+        let new_album = sanitize_filename(updates.album.as_deref().unwrap_or(&target.album));
+        let old_artist = sanitize_filename(&target.artist);
+        let old_album = sanitize_filename(&target.album);
 
-                let safe_artist = sanitize_filename(artist_val);
-                let safe_album = sanitize_filename(album_val);
-
-                let new_folder = music_base_dir.join(&safe_artist).join(&safe_album);
-                if !new_folder.exists() {
-                    let _ = fs::create_dir_all(&new_folder);
-                }
-
-                if let Some(file_name) = current_path.file_name() {
-                    let dest_path = new_folder.join(file_name);
-                    if current_path.exists() && current_path != dest_path {
-                        if let Ok(_) = fs::rename(current_path, &dest_path) {
-                            new_file_path = dest_path.to_string_lossy().to_string();
-                        }
-                    }
+        // Chỉ di chuyển khi bố cục thư mục khớp đúng Nghệ sĩ/Album cũ; nếu không thì giữ nguyên file.
+        if let Some(new_folder) = crate::security::plan_move_target(current_path, &old_artist, &old_album, &new_artist, &new_album) {
+            if let Some(file_name) = current_path.file_name() {
+                let dest_path = new_folder.join(file_name);
+                if current_path.exists() && dest_path != current_path && !dest_path.exists() {
+                    fs::create_dir_all(&new_folder).map_err(|e| e.to_string())?;
+                    fs::rename(current_path, &dest_path).map_err(|e| e.to_string())?;
+                    let old_dir = current_path.parent();
+                    let new_lrc = move_companion(target.lrc_path.as_deref(), old_dir, &new_folder);
+                    let new_mv = move_companion(target.mv_path.as_deref(), old_dir, &new_folder);
+                    moved = Some((dest_path.to_string_lossy().to_string(), new_lrc, new_mv));
                 }
             }
         }
     }
 
+    // Cập nhật metadata theo id CŨ trước, rồi mới đổi id/đường dẫn nếu file đã di chuyển.
     db::update_track_metadata_db(
         &conn,
         &track_id,
@@ -529,9 +594,15 @@ pub fn update_track_metadata(
         updates.album.as_deref(),
         updates.year,
         updates.picture.as_deref(),
-        Some(&new_file_path),
+        None,
     )
     .map_err(|e| e.to_string())?;
+
+    if let Some((new_path, new_lrc, new_mv)) = moved {
+        let new_id = base64::engine::general_purpose::STANDARD.encode(&new_path);
+        db::rekey_track(&mut conn, &track_id, &new_id, &new_path, new_lrc.as_deref(), new_mv.as_deref())
+            .map_err(|e| e.to_string())?;
+    }
 
     Ok(true)
 }
@@ -550,7 +621,7 @@ pub fn sanitize_filename_robust(name: &str, max_len: usize) -> String {
     let mut cleaned: String = name
         .chars()
         .map(|c| match c {
-            '\\' | '/' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            '\\' | '/' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '%' => '_',
             c if (c as u32) < 32 || c == '\u{7f}' => '_',
             '\u{202E}' | '\u{202D}' | '\u{200E}' | '\u{200F}' => '_',
             _ => c,
@@ -692,10 +763,72 @@ pub async fn scan_folder(
     state: State<'_, DbState>,
     folder_path: String,
 ) -> Result<Vec<Track>, String> {
+    // Toàn bộ I/O (walk, đọc tag, so khớp LRC/MV, ghi DB) chạy trên thread blocking.
+    let db = state.0.clone();
+    tokio::task::spawn_blocking(move || scan_folder_blocking(&app, &db, &folder_path))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Trả về thư mục (đã cache) các file thường trong `dir`, để tránh đọc lại thư mục cho mỗi bài.
+fn list_dir_cached<'a>(cache: &'a mut HashMap<PathBuf, Vec<PathBuf>>, dir: &Path) -> &'a Vec<PathBuf> {
+    cache.entry(dir.to_path_buf()).or_insert_with(|| {
+        fs::read_dir(dir)
+            .map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_file()).collect())
+            .unwrap_or_default()
+    })
+}
+
+/// Tìm LRC/MV khớp nhất với bài. Thư mục đầu (cùng folder) dùng ngưỡng 0.65;
+/// thư mục cha (có thể chứa album khác) yêu cầu 0.85 để tránh gán nhầm.
+fn find_companion(
+    title: &str,
+    file_stem: &str,
+    dirs: &[PathBuf],
+    exts: &[&str],
+    cache: &mut HashMap<PathBuf, Vec<PathBuf>>,
+) -> Option<String> {
+    for (idx, dir) in dirs.iter().enumerate() {
+        let min_score = if idx == 0 { 0.65 } else { 0.85 };
+        let files = list_dir_cached(cache, dir);
+        let mut best: Option<(f64, String)> = None;
+        for path in files.iter() {
+            let ext_ok = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| exts.contains(&e.to_lowercase().as_str()))
+                .unwrap_or(false);
+            if !ext_ok {
+                continue;
+            }
+            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            if !is_match_allowed(stem, title, file_stem) {
+                continue;
+            }
+            let score = calculate_similarity(title, stem).max(calculate_similarity(file_stem, stem));
+            if score > min_score && best.as_ref().map_or(true, |(b, _)| score > *b) {
+                best = Some((score, path.to_string_lossy().to_string()));
+            }
+        }
+        if let Some((_, p)) = best {
+            return Some(p);
+        }
+    }
+    None
+}
+
+fn scan_folder_blocking(
+    app: &AppHandle,
+    db: &Arc<Mutex<rusqlite::Connection>>,
+    folder_path: &str,
+) -> Result<Vec<Track>, String> {
+    // Cho phép webview đọc ảnh/video trong thư mục người dùng vừa chọn (asset protocol scope)
+    let _ = app.asset_protocol_scope().allow_directory(folder_path, true);
+
     let mut audio_files = Vec::new();
     let supported_exts = ["mp3", "flac", "wav", "m4a", "aac", "ogg"];
 
-    for entry in WalkDir::new(&folder_path).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(folder_path).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
         if path.is_file() {
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
@@ -707,6 +840,7 @@ pub async fn scan_folder(
     }
 
     let mut scanned_tracks = Vec::new();
+    let mut dir_cache: HashMap<PathBuf, Vec<PathBuf>> = HashMap::new();
 
     for file_path in audio_files {
         let file_path_str = file_path.to_string_lossy().to_string();
@@ -766,7 +900,7 @@ pub async fn scan_folder(
             }
         }
 
-        // Smart match LRC
+        // LRC: khớp chính xác tên file trước, sau đó fuzzy match
         let mut lrc_path = None;
         if let Some(p) = parent_dir {
             let exact_lrc = p.join(format!("{}.lrc", file_stem));
@@ -774,72 +908,12 @@ pub async fn scan_folder(
                 lrc_path = Some(exact_lrc.to_string_lossy().to_string());
             }
         }
-
         if lrc_path.is_none() {
-            'lrc_search: for dir in &candidate_dirs {
-                if let Ok(entries) = fs::read_dir(dir) {
-                    let mut best_score = 0.0;
-                    let mut best_path = None;
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        if path.is_file() {
-                            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                                if ["lrc", "txt"].contains(&ext.to_lowercase().as_str()) {
-                                    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                                    if !is_match_allowed(stem, &title, file_stem) {
-                                        continue;
-                                    }
-                                    let s1 = calculate_similarity(&title, stem);
-                                    let s2 = calculate_similarity(file_stem, stem);
-                                    let score = s1.max(s2);
-                                    if score > 0.65 && score > best_score {
-                                        best_score = score;
-                                        best_path = Some(path.to_string_lossy().to_string());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if let Some(bp) = best_path {
-                        lrc_path = Some(bp);
-                        break 'lrc_search;
-                    }
-                }
-            }
+            lrc_path = find_companion(&title, file_stem, &candidate_dirs, &["lrc", "txt"], &mut dir_cache);
         }
 
-        // Smart match MV
-        let mut mv_path = None;
-        'mv_search: for dir in &candidate_dirs {
-            if let Ok(entries) = fs::read_dir(dir) {
-                let mut best_score = 0.0;
-                let mut best_path = None;
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.is_file() {
-                        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                            if ["mp4", "mkv", "webm", "mov"].contains(&ext.to_lowercase().as_str()) {
-                                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                                if !is_match_allowed(stem, &title, file_stem) {
-                                    continue;
-                                }
-                                let s1 = calculate_similarity(&title, stem);
-                                let s2 = calculate_similarity(file_stem, stem);
-                                let score = s1.max(s2);
-                                if score > 0.65 && score > best_score {
-                                    best_score = score;
-                                    best_path = Some(path.to_string_lossy().to_string());
-                                }
-                            }
-                        }
-                    }
-                }
-                if let Some(bp) = best_path {
-                    mv_path = Some(bp);
-                    break 'mv_search;
-                }
-            }
-        }
+        // MV
+        let mv_path = find_companion(&title, file_stem, &candidate_dirs, &["mp4", "mkv", "webm", "mov"], &mut dir_cache);
 
         let track_id = base64::engine::general_purpose::STANDARD.encode(&file_path_str);
         scanned_tracks.push(Track {
@@ -860,7 +934,7 @@ pub async fn scan_folder(
         });
     }
 
-    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+    let mut conn = db.lock().map_err(|e| e.to_string())?;
     db::save_tracks(&mut conn, &scanned_tracks).map_err(|e| e.to_string())?;
     db::get_all_tracks(&conn, None, None).map_err(|e| e.to_string())
 }
@@ -1147,7 +1221,7 @@ fn internal_search_youtube(
     })?;
 
     let search_target = if q.starts_with("http://") || q.starts_with("https://") {
-        q.to_string()
+        crate::security::validate_media_url(q)?
     } else {
         format!("ytsearch{}:{}", lim, q)
     };
@@ -1160,7 +1234,6 @@ fn internal_search_youtube(
         .arg("--dump-json")
         .arg("--flat-playlist")
         .arg("--no-warnings")
-        .arg("--no-check-certificates")
         .arg("--ignore-errors");
 
     #[cfg(windows)]
@@ -1265,9 +1338,13 @@ pub async fn get_youtube_preview_stream_url(
         })?;
 
         let target_url = if url_or_id.starts_with("http://") || url_or_id.starts_with("https://") {
-            url_or_id
+            crate::security::validate_media_url(&url_or_id)?
         } else {
-            format!("https://www.youtube.com/watch?v={}", url_or_id.trim())
+            let id = url_or_id.trim();
+            if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+                return Err("Mã video không hợp lệ".to_string());
+            }
+            format!("https://www.youtube.com/watch?v={}", id)
         };
 
         let mut cmd = std::process::Command::new(&yt_exec.program);
@@ -1281,7 +1358,6 @@ pub async fn get_youtube_preview_stream_url(
             .arg("youtube:player_client=mweb,android,web_creator,tv")
             .arg("--no-playlist")
             .arg("--no-warnings")
-            .arg("--no-check-certificates")
             .arg(&target_url);
 
         #[cfg(windows)]
@@ -1335,7 +1411,6 @@ pub async fn get_artist_discovery_recommendations(
                 .arg("--dump-json")
                 .arg("--flat-playlist")
                 .arg("--no-warnings")
-                .arg("--no-check-certificates")
                 .arg("--ignore-errors");
 
             #[cfg(windows)]
@@ -1417,6 +1492,7 @@ fn internal_download_track(
     download_type_opt: Option<String>,
     thumbnail_opt: Option<String>,
 ) -> Result<Track, String> {
+    let url = crate::security::validate_media_url(&url)?;
     let yt_exec = detect_system_yt_dlp().ok_or_else(|| {
         "yt-dlp chưa sẵn sàng trong hệ thống. Vui lòng kiểm tra lại.".to_string()
     })?;
@@ -1469,7 +1545,7 @@ fn internal_download_track(
         } else {
             target_dir.join("%(title).100B [%(id)s].mp4")
         };
-        let mv_template_str = mv_template.to_string_lossy().to_string();
+        let mv_template_str = yt_template(&target_dir, &mv_template.file_name().unwrap_or_default().to_string_lossy());
 
         let mut mv_cmd = std::process::Command::new(&yt_exec.program);
         for arg in &yt_exec.prefix_args {
@@ -1497,7 +1573,6 @@ fn internal_download_track(
             .arg("--geo-bypass")
             .arg("--no-playlist")
             .arg("--no-warnings")
-            .arg("--no-check-certificates")
             .arg("--print")
             .arg("after_move:filepath")
             .arg("-o")
@@ -1540,7 +1615,7 @@ fn internal_download_track(
         } else {
             target_dir.join("%(title).100B [%(id)s].%(ext)s")
         };
-        let out_template_str = out_template.to_string_lossy().to_string();
+        let out_template_str = yt_template(&target_dir, &out_template.file_name().unwrap_or_default().to_string_lossy());
 
         let mut cmd = std::process::Command::new(&yt_exec.program);
         for arg in &yt_exec.prefix_args {
@@ -1571,7 +1646,6 @@ fn internal_download_track(
 
         cmd.arg("--no-playlist")
             .arg("--no-warnings")
-            .arg("--no-check-certificates")
             .arg("--print")
             .arg("after_move:filepath")
             .arg("-o")

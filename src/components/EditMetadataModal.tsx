@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { X, Upload, Save, FolderCheck } from 'lucide-react';
 import type { Track, Album } from '../types';
 import { usePlayer } from '../context/PlayerContext';
@@ -15,6 +16,7 @@ export const EditMetadataModal: React.FC<EditMetadataModalProps> = ({
   data,
   onClose
 }) => {
+  useEscapeKey(onClose, Boolean(data));
   const { updateTrackMetadata } = usePlayer();
   const isTrack = type === 'track';
   const track = isTrack ? (data as Track) : null;

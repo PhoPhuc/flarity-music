@@ -1,5 +1,5 @@
 import type { LyricLine, TranslationSettings, TranslationProvider } from '../types';
-import { loadTranslationSettings, saveTranslationSettings, SUPPORTED_LANGUAGES } from '../types';
+import { loadTranslationSettings, SUPPORTED_LANGUAGES } from '../types';
 
 // Bộ nhớ cache tạm thời trong phiên làm việc
 const memoryCache = new Map<string, string[]>();
@@ -251,7 +251,7 @@ export function stripLineIndexPrefix(text: string): string {
   return cleaned;
 }
 
-function parseAiResponseLines(rawResponse: string, expectedCount: number): string[] {
+function parseAiResponseLines(rawResponse: string, _expectedCount: number): string[] {
   let cleaned = rawResponse.trim();
   
   // 1. Thử parse nếu là JSON mảng

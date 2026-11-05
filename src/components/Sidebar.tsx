@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import { usePlayer } from '../context/PlayerContext';
 import {
   Music2,
@@ -41,6 +42,7 @@ export const Sidebar: React.FC = () => {
   } = usePlayer();
 
   const [showNewPlaylistModal, setShowNewPlaylistModal] = useState(false);
+  useEscapeKey(() => setShowNewPlaylistModal(false), showNewPlaylistModal);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [playlistMenu, setPlaylistMenu] = useState<PlaylistContextMenu | null>(null);
   const [renameState, setRenameState] = useState<{ id: string; name: string } | null>(null);

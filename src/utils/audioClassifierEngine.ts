@@ -425,7 +425,6 @@ function reconcileCrossFeatureCorrelations(
   // =========================================================================
   const onsetDensityScore = Math.min(1, Math.max(0, (avgOnsetRate - 1.2) / 4.8));
   const subBassPunchScore = Math.min(1, Math.max(0, (avgSubBass - 0.08) / 0.28));
-  const transientScore = Math.min(1, Math.max(0, (avgZcr - 0.015) / 0.065));
   const spectralScore = Math.min(
     1,
     Math.max(0, ((avgRolloff - 1200) / 3200) * 0.55 + ((avgCentroid - 800) / 2400) * 0.45)

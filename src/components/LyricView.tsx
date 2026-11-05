@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { usePlayer } from '../context/PlayerContext';
-import { Music, FileText, LocateFixed, Sparkles, Disc, Search, Volume2, Languages } from 'lucide-react';
+import { Music, FileText, LocateFixed, Sparkles, Disc, Search, Volume2 } from 'lucide-react';
 import { LyricsVisualizerBg } from './LyricsVisualizerBg';
 import { SoundWave } from './SoundWave';
 import { analyzeTrackAudio } from '../utils/audioTech';
@@ -8,7 +8,6 @@ import { convertFileSrc } from '../utils/tauriBridge';
 import {
   type LyricCustomizationSettings,
   type TranslationSettings,
-  type LyricLine,
   loadLyricSettings,
   loadTranslationSettings,
 } from '../types';

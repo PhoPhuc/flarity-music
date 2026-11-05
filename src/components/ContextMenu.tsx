@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import {
   Play,
   ListPlus,
@@ -12,7 +13,6 @@ import {
   Disc,
   Mic2,
   FileVideo,
-  Search,
   Sparkles,
 } from 'lucide-react';
 import type { Track, Album } from '../types';
@@ -33,6 +33,7 @@ interface ContextMenuProps {
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({ target, onClose, onOpenEditModal }) => {
+  useEscapeKey(onClose, Boolean(target));
   const menuRef = useRef<HTMLDivElement>(null);
   const [showPlaylistSubmenu, setShowPlaylistSubmenu] = useState(false);
   const [showAlbumPlaylistSubmenu, setShowAlbumPlaylistSubmenu] = useState(false);

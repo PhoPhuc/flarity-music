@@ -551,11 +551,6 @@ export function scoreArtistVsTitle(str: string): { artistScore: number; titleSco
   return { artistScore, titleScore };
 }
 
-function isLikelyArtistString(str: string): boolean {
-  const { artistScore, titleScore } = scoreArtistVsTitle(str);
-  return artistScore > titleScore;
-}
-
 /**
  * Comprehensive Parser for Complex Vietnamese YouTube Titles:
  */

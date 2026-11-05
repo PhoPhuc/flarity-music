@@ -8,7 +8,7 @@ import {
   Disc,
   Music,
 } from 'lucide-react';
-import type { Track } from '../types';
+import type { } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { useSmartMusicRecommendations } from '../hooks/useSmartMusicRecommendations';
 import { convertFileSrc } from '../utils/tauriBridge';

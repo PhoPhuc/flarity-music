@@ -116,13 +116,8 @@ pub fn get_db_path(app: &AppHandle) -> PathBuf {
 
 pub fn init_db(app: &AppHandle) -> Result<Connection> {
     let db_path = get_db_path(app);
-    let conn = match Connection::open(&db_path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("[DB WARN] Failed to open DB at {:?}: {}. Fallback to in-memory DB.", db_path, e);
-            Connection::open_in_memory()?
-        }
-    };
+    // Không tự rơi về DB in-memory: lỗi được trả về để caller quyết định và báo cho người dùng.
+    let conn = Connection::open(&db_path)?;
 
     // Thực thi PRAGMAs siêu tiết kiệm RAM (< 8MB RAM, tốc độ < 0.2ms)
     let _ = conn.execute_batch("
@@ -136,6 +131,12 @@ pub fn init_db(app: &AppHandle) -> Result<Connection> {
         PRAGMA foreign_keys = ON;            -- Kích hoạt ràng buộc khóa ngoại Cascade
     ");
 
+    apply_schema(&conn)?;
+    Ok(conn)
+}
+
+/// Tạo/migrate schema. Tách riêng để kiểm thử với DB in-memory.
+pub fn apply_schema(conn: &Connection) -> Result<()> {
     let user_version: i32 = conn
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap_or(0);
@@ -280,7 +281,26 @@ pub fn init_db(app: &AppHandle) -> Result<Connection> {
         let _ = conn.execute("ALTER TABLE saved_tracks ADD COLUMN lrc_path TEXT;", []);
     }
 
-    // Dọn dẹp bloat: loại bỏ Base64 rác khỏi DB, giới hạn log lịch sử trong 90 ngày và truncate WAL
+    // v3: cờ đánh dấu bài đã được người dùng chỉnh sửa tay (không bị quét lại ghi đè)
+    if user_version < 3 {
+        let _ = conn.execute("ALTER TABLE saved_tracks ADD COLUMN manual_edit INTEGER DEFAULT 0;", []);
+        conn.execute_batch("PRAGMA user_version = 3;")?;
+    }
+
+    // Giới hạn log lịch sử trong 90 ngày và truncate WAL.
+    // (Việc loại bỏ Base64 nằm ở run_background_backfill, SAU khi đã migrate ảnh ra file.)
+    let _ = conn.execute_batch(
+        "
+        DELETE FROM play_history WHERE played_at < CAST(strftime('%s', 'now', '-90 days') AS INTEGER);
+        PRAGMA wal_checkpoint(TRUNCATE);
+        ",
+    );
+
+    Ok(())
+}
+
+pub fn run_background_backfill(conn: &Connection) {
+    // Chạy sau migrate_base64_covers_in_db: xóa mọi Base64 còn sót lại, tránh phình DB.
     let _ = conn.execute_batch(
         "
         UPDATE play_history SET album_art = NULL WHERE album_art LIKE 'data:%' OR length(album_art) > 500;
@@ -288,15 +308,8 @@ pub fn init_db(app: &AppHandle) -> Result<Connection> {
         UPDATE song_analytics_all SET album_art = NULL WHERE album_art LIKE 'data:%' OR length(album_art) > 500;
         UPDATE saved_tracks SET picture = NULL WHERE picture LIKE 'data:%' OR length(picture) > 500;
         UPDATE playlists SET cover_art = NULL WHERE cover_art LIKE 'data:%' OR length(cover_art) > 500;
-        DELETE FROM play_history WHERE played_at < CAST(strftime('%s', 'now', '-90 days') AS INTEGER);
-        PRAGMA wal_checkpoint(TRUNCATE);
-        "
+        ",
     );
-
-    Ok(conn)
-}
-
-pub fn run_background_backfill(conn: &Connection) {
     let _ = conn.execute(
         "INSERT OR IGNORE INTO song_analytics_all (song_id, song_title, artist_name, album_art, total_duration, valid_play_count, last_played_at)
         SELECT 
@@ -463,18 +476,18 @@ pub fn save_tracks(conn: &mut Connection, tracks: &[Track]) -> Result<()> {
             "INSERT INTO saved_tracks (id, file_path, title, artist, album, genre, year, duration, bpm, picture, has_lyric, lrc_path, has_mv, mv_path)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
              ON CONFLICT(file_path) DO UPDATE SET
-               title=excluded.title,
-               artist=excluded.artist,
-               album=excluded.album,
+               title = CASE WHEN saved_tracks.manual_edit = 1 THEN saved_tracks.title ELSE excluded.title END,
+               artist = CASE WHEN saved_tracks.manual_edit = 1 THEN saved_tracks.artist ELSE excluded.artist END,
+               album = CASE WHEN saved_tracks.manual_edit = 1 THEN saved_tracks.album ELSE excluded.album END,
                genre=excluded.genre,
-               year=excluded.year,
+               year = CASE WHEN saved_tracks.manual_edit = 1 THEN saved_tracks.year ELSE excluded.year END,
                duration=excluded.duration,
                bpm=excluded.bpm,
-               picture=excluded.picture,
-               has_lyric=excluded.has_lyric,
-               lrc_path=excluded.lrc_path,
-               has_mv=excluded.has_mv,
-               mv_path=excluded.mv_path"
+               picture = CASE WHEN saved_tracks.manual_edit = 1 THEN saved_tracks.picture ELSE excluded.picture END,
+               lrc_path = COALESCE(saved_tracks.lrc_path, excluded.lrc_path),
+               has_lyric = CASE WHEN COALESCE(saved_tracks.lrc_path, excluded.lrc_path) IS NOT NULL THEN 1 ELSE 0 END,
+               mv_path = COALESCE(saved_tracks.mv_path, excluded.mv_path),
+               has_mv = CASE WHEN COALESCE(saved_tracks.mv_path, excluded.mv_path) IS NOT NULL THEN 1 ELSE 0 END"
         )?;
 
         for t in tracks {
@@ -1063,12 +1076,12 @@ pub fn merge_album(
 ) -> Result<()> {
     if source_artist.is_empty() || source_artist == "Nghệ sĩ chưa biết" || source_artist == target_artist {
         conn.execute(
-            "UPDATE saved_tracks SET album = ?1, artist = ?2 WHERE album = ?3",
+            "UPDATE saved_tracks SET album = ?1, artist = ?2, manual_edit = 1 WHERE album = ?3",
             params![target_album_name, target_artist, source_album_name],
         )?;
     } else {
         conn.execute(
-            "UPDATE saved_tracks SET album = ?1, artist = ?2 WHERE album = ?3 AND artist = ?4",
+            "UPDATE saved_tracks SET album = ?1, artist = ?2, manual_edit = 1 WHERE album = ?3 AND artist = ?4",
             params![target_album_name, target_artist, source_album_name, source_artist],
         )?;
     }
@@ -1116,6 +1129,7 @@ pub fn update_track_metadata_db(
     if fields.is_empty() {
         return Ok(());
     }
+    fields.push("manual_edit = 1");
 
     params_vec.push(Box::new(track_id.to_string()));
     let query = format!("UPDATE saved_tracks SET {} WHERE id = ?", fields.join(", "));
@@ -1123,6 +1137,31 @@ pub fn update_track_metadata_db(
     let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|b| b.as_ref()).collect();
     conn.execute(&query, params_refs.as_slice())?;
     Ok(())
+}
+
+/// Đổi id + đường dẫn của một bài sau khi file được di chuyển, và cập nhật mọi bảng tham chiếu id.
+pub fn rekey_track(
+    conn: &mut Connection,
+    old_id: &str,
+    new_id: &str,
+    new_path: &str,
+    new_lrc: Option<&str>,
+    new_mv: Option<&str>,
+) -> Result<()> {
+    let tx = conn.transaction()?;
+    tx.execute(
+        "UPDATE saved_tracks SET id = ?1, file_path = ?2,
+           lrc_path = COALESCE(?3, lrc_path), mv_path = COALESCE(?4, mv_path)
+         WHERE id = ?5",
+        params![new_id, new_path, new_lrc, new_mv, old_id],
+    )?;
+    tx.execute("UPDATE OR IGNORE playlist_songs SET track_id = ?1 WHERE track_id = ?2", params![new_id, old_id])?;
+    tx.execute("UPDATE OR IGNORE track_transitions SET from_song_id = ?1 WHERE from_song_id = ?2", params![new_id, old_id])?;
+    tx.execute("UPDATE OR IGNORE track_transitions SET to_song_id = ?1 WHERE to_song_id = ?2", params![new_id, old_id])?;
+    tx.execute("UPDATE play_history SET song_id = ?1 WHERE song_id = ?2", params![new_id, old_id])?;
+    tx.execute("UPDATE OR IGNORE daily_song_analytics SET song_id = ?1 WHERE song_id = ?2", params![new_id, old_id])?;
+    tx.execute("UPDATE OR IGNORE song_analytics_all SET song_id = ?1 WHERE song_id = ?2", params![new_id, old_id])?;
+    tx.commit()
 }
 
 pub fn delete_track_db(conn: &Connection, track_id: &str) -> Result<()> {
@@ -1375,3 +1414,78 @@ pub fn get_smart_recommendations_batch_db(
 
 
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fresh() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+        apply_schema(&conn).unwrap();
+        conn
+    }
+
+    fn track(id: &str, path: &str, title: &str) -> Track {
+        Track {
+            id: id.into(),
+            file_path: path.into(),
+            title: title.into(),
+            artist: "Artist".into(),
+            album: "Album".into(),
+            genre: None,
+            year: Some(2020),
+            duration: 200.0,
+            bpm: None,
+            picture: None,
+            has_lyric: false,
+            lrc_path: None,
+            has_mv: false,
+            mv_path: None,
+        }
+    }
+
+    #[test]
+    fn rescan_keeps_manual_metadata_edit() {
+        let mut conn = fresh();
+        save_tracks(&mut conn, &[track("id1", "/m/a.mp3", "Original")]).unwrap();
+        update_track_metadata_db(&conn, "id1", Some("Edited"), None, None, None, None, None).unwrap();
+        save_tracks(&mut conn, &[track("id1", "/m/a.mp3", "Original")]).unwrap();
+        let t = get_track_by_id(&conn, "id1").unwrap().unwrap();
+        assert_eq!(t.title, "Edited");
+    }
+
+    #[test]
+    fn rescan_keeps_attached_lrc_when_scan_finds_none() {
+        let mut conn = fresh();
+        save_tracks(&mut conn, &[track("id1", "/m/a.mp3", "T")]).unwrap();
+        update_track_lrc_db(&conn, "id1", "/m/manual.lrc").unwrap();
+        save_tracks(&mut conn, &[track("id1", "/m/a.mp3", "T")]).unwrap();
+        let t = get_track_by_id(&conn, "id1").unwrap().unwrap();
+        assert_eq!(t.lrc_path.as_deref(), Some("/m/manual.lrc"));
+        assert!(t.has_lyric);
+    }
+
+    #[test]
+    fn rescan_updates_title_when_not_manually_edited() {
+        let mut conn = fresh();
+        save_tracks(&mut conn, &[track("id1", "/m/a.mp3", "Old")]).unwrap();
+        save_tracks(&mut conn, &[track("id1", "/m/a.mp3", "New")]).unwrap();
+        assert_eq!(get_track_by_id(&conn, "id1").unwrap().unwrap().title, "New");
+    }
+
+    #[test]
+    fn rekey_moves_references_to_new_id() {
+        let mut conn = fresh();
+        save_tracks(&mut conn, &[track("old", "/m/a.mp3", "T")]).unwrap();
+        conn.execute("INSERT INTO playlists (id, name, created_at) VALUES ('pl', 'P', 0)", []).unwrap();
+        conn.execute("INSERT INTO playlist_songs (playlist_id, track_id, position) VALUES ('pl', 'old', 0)", []).unwrap();
+        rekey_track(&mut conn, "old", "new", "/n/a.mp3", None, None).unwrap();
+        assert!(get_track_by_id(&conn, "old").unwrap().is_none());
+        assert_eq!(get_track_by_id(&conn, "new").unwrap().unwrap().file_path, "/n/a.mp3");
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM playlist_songs WHERE track_id = 'new'", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+    }
+}

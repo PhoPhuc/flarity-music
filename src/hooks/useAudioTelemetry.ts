@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { tauriAPI } from '../utils/tauriBridge';
 import type { Track } from '../types';
 
@@ -34,6 +34,11 @@ export const useAudioTelemetry = ({ audio, track }: UseAudioTelemetryOptions) =>
   }, [audio, track]);
 
   useEffect(() => {
+    // Ghi định kỳ khi đang phát để không mất dữ liệu nếu app bị crash
+    const heartbeat = setInterval(() => {
+      if (!audio.paused) void tauriAPI.telemetryFlush();
+    }, 30_000);
+
     const handlePlay = () => {
       void tauriAPI.telemetryOnPlay();
     };
@@ -57,6 +62,7 @@ export const useAudioTelemetry = ({ audio, track }: UseAudioTelemetryOptions) =>
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
+      clearInterval(heartbeat);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('playing', handlePlay);
@@ -67,7 +73,6 @@ export const useAudioTelemetry = ({ audio, track }: UseAudioTelemetryOptions) =>
     };
   }, [audio]);
 
-  return {
-    flushTelemetry: (_reason?: string) => void tauriAPI.telemetryOnPause(),
-  };
+  const flushTelemetry = useCallback((_reason?: string) => void tauriAPI.telemetryOnPause(), []);
+  return { flushTelemetry };
 };
