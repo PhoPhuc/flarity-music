@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod telemetry;
 mod covers;
+mod security;
 
 use commands::*;
 use db::init_db;
@@ -30,14 +31,17 @@ pub fn run() {
             let telemetry_engine = telemetry_engine.clone();
             move |app| {
                 println!(">>> [STEP 2] Initializing DB");
-                let conn = match init_db(app.handle()) {
-                    Ok(c) => c,
+                let (conn, db_persistent) = match init_db(app.handle()) {
+                    Ok(c) => (c, true),
                     Err(e) => {
-                        eprintln!(">>> [DB WARN] DB init error: {:?}. Opening fallback in-memory DB.", e);
-                        rusqlite::Connection::open_in_memory().unwrap_or_else(|_| rusqlite::Connection::open(":memory:").unwrap())
+                        // Báo rõ lỗi; dùng DB tạm để app vẫn mở, nhưng KHÔNG dọn dẹp file ảnh
+                        // (tập "đang dùng" trong DB tạm rỗng, dọn sẽ xóa nhầm toàn bộ ảnh).
+                        eprintln!(">>> [DB ERROR] Không mở được DB: {:?}. Chạy bằng DB tạm, dữ liệu sẽ không được lưu.", e);
+                        (rusqlite::Connection::open_in_memory()?, false)
                     }
                 };
-                println!(">>> [STEP 3] DB Initialized Successfully");
+                println!(">>> [STEP 3] DB Initialized (persistent: {})", db_persistent);
+                app.manage(DbStatus { persistent: db_persistent });
 
                 let db_arc = Arc::new(Mutex::new(conn));
                 app.manage(DbState(db_arc.clone()));
@@ -48,6 +52,10 @@ pub fn run() {
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
                     println!(">>> [ASYNC INIT] Starting DB backfill and covers migration in background thread");
+                    if !db_persistent {
+                        println!(">>> [ASYNC INIT] DB tạm: bỏ qua migration/dọn dẹp để không mất dữ liệu");
+                        return;
+                    }
                     if let Ok(bg_conn) = db::init_db(&app_handle_for_migration) {
                         covers::migrate_base64_covers_in_db(&app_handle_for_migration, &bg_conn);
                         let _ = covers::cleanup_orphan_covers(&app_handle_for_migration, &bg_conn);
@@ -64,7 +72,9 @@ pub fn run() {
                         tokio::time::sleep(std::time::Duration::from_secs(60)).await;
                         if let Ok(conn) = db_arc_for_trim.lock() {
                             let _ = conn.execute_batch("PRAGMA shrink_memory; PRAGMA wal_checkpoint(PASSIVE);");
-                            let _ = covers::cleanup_orphan_covers(&app_handle_for_trim, &conn);
+                            if db_persistent {
+                                let _ = covers::cleanup_orphan_covers(&app_handle_for_trim, &conn);
+                            }
                         }
                         #[cfg(windows)]
                         unsafe {
@@ -93,6 +103,7 @@ pub fn run() {
             telemetry_on_track_change,
             telemetry_on_rate_change,
             telemetry_on_app_exit,
+            telemetry_flush,
             get_analytics_stats,
             get_top_listened_tracks,
             get_recently_played,
@@ -123,6 +134,7 @@ pub fn run() {
             get_youtube_preview_stream_url,
             open_external_url,
             shrink_memory,
+            get_db_status,
         ])
         .build(tauri::generate_context!()) {
             Ok(a) => a,
@@ -137,8 +149,11 @@ pub fn run() {
     app.run(move |app_handle, event| {
         match event {
             tauri::RunEvent::ExitRequested { api, .. } => {
-                // TRỌNG YẾU TỐI CAO TRÊN ANDROID: Ngăn chặn Android Lifecycle tự động ngắt làm đóng ứng dụng khi mở!
+                // TRÊN ANDROID: ngăn Lifecycle tự đóng app khi chỉ là chuyển nền.
+                // TRÊN DESKTOP: để app thoát thật sự khi đóng cửa sổ (không chạy ngầm).
+                #[cfg(mobile)]
                 api.prevent_exit();
+                let _ = &api;
 
                 if let (Some(db_state), Some(telemetry_state)) = (
                     app_handle.try_state::<DbState>(),

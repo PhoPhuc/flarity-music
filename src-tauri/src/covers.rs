@@ -1,5 +1,7 @@
+use std::collections::HashSet;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 use base64::Engine;
 use rusqlite::Connection;
 use tauri::{AppHandle, Manager};
@@ -130,59 +132,119 @@ pub fn migrate_base64_covers_in_db(app: &AppHandle, conn: &Connection) {
 }
 
 /**
- * Dọn dẹp các tệp ảnh bìa mồ côi trên đĩa không còn bài hát nào tham chiếu đến
+ * Tập tên file ảnh bìa đang được tham chiếu trong DB (tất cả bảng có cột ảnh).
+ * Trả về Err nếu bất kỳ truy vấn nào thất bại: KHÔNG được coi lỗi là "không dùng".
  */
-pub fn cleanup_orphan_covers(app: &AppHandle, conn: &Connection) -> rusqlite::Result<usize> {
-    let covers_dir = get_covers_dir(app);
-    let mut used_filenames = std::collections::HashSet::new();
-
-    // 1. Thu thập tất cả các tên file cover đang được sử dụng trong DB (Chuẩn hóa cross-platform)
-    if let Ok(mut stmt) = conn.prepare(
+pub fn collect_used_cover_filenames(conn: &Connection) -> rusqlite::Result<HashSet<String>> {
+    let mut used = HashSet::new();
+    let mut stmt = conn.prepare(
         "SELECT picture FROM saved_tracks WHERE picture IS NOT NULL
-         UNION
-         SELECT cover_art FROM playlists WHERE cover_art IS NOT NULL
-         UNION
-         SELECT album_art FROM song_analytics_all WHERE album_art IS NOT NULL"
-    ) {
-        if let Ok(rows) = stmt.query_map([], |row| row.get::<_, String>(0)) {
-            for r in rows.flatten() {
-                if let Some(fname) = std::path::Path::new(&r).file_name() {
-                    used_filenames.insert(fname.to_string_lossy().to_string());
-                }
-            }
+         UNION SELECT cover_art FROM playlists WHERE cover_art IS NOT NULL
+         UNION SELECT album_art FROM song_analytics_all WHERE album_art IS NOT NULL
+         UNION SELECT album_art FROM daily_song_analytics WHERE album_art IS NOT NULL
+         UNION SELECT album_art FROM play_history WHERE album_art IS NOT NULL",
+    )?;
+    let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+    for r in rows {
+        let path = r?;
+        if let Some(fname) = Path::new(&path).file_name() {
+            used.insert(fname.to_string_lossy().to_string());
         }
     }
-
-    // 2. Quét thư mục và xóa các file mồ côi (có grace period 15 phút)
-    let mut deleted_count = 0;
-    let now = std::time::SystemTime::now();
-    let grace_period = std::time::Duration::from_secs(900); // 15 phút an toàn
-
-    if let Ok(entries) = fs::read_dir(covers_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                let fname = entry.file_name().to_string_lossy().to_string();
-                if !used_filenames.contains(&fname) {
-                    // Kiểm tra thời gian sửa đổi: Bỏ qua file vừa được ghi gần đây
-                    if let Ok(metadata) = entry.metadata() {
-                        if let Ok(modified) = metadata.modified() {
-                            if let Ok(age) = now.duration_since(modified) {
-                                if age < grace_period {
-                                    continue; // File mới tạo khi scan, giữ lại an toàn
-                                }
-                            }
-                        }
-                    }
-
-                    if fs::remove_file(&path).is_ok() {
-                        deleted_count += 1;
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(deleted_count)
+    Ok(used)
 }
 
+/**
+ * Xóa các file trong `covers_dir` không nằm trong `used` và cũ hơn grace period (15 phút).
+ * `now` được truyền vào để kiểm thử.
+ */
+pub fn remove_orphans_in_dir(covers_dir: &Path, used: &HashSet<String>, now: SystemTime) -> usize {
+    let grace_period = Duration::from_secs(900);
+    let mut deleted_count = 0;
+    let entries = match fs::read_dir(covers_dir) {
+        Ok(e) => e,
+        Err(_) => return 0,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let fname = entry.file_name().to_string_lossy().to_string();
+        if used.contains(&fname) {
+            continue;
+        }
+        if let Ok(modified) = entry.metadata().and_then(|m| m.modified()) {
+            if now.duration_since(modified).map(|age| age < grace_period).unwrap_or(true) {
+                continue;
+            }
+        }
+        if fs::remove_file(&path).is_ok() {
+            deleted_count += 1;
+        }
+    }
+    deleted_count
+}
+
+/**
+ * Dọn ảnh bìa mồ côi. An toàn: nếu không đọc được DB hoặc DB không có ảnh nào
+ * thì không xóa gì cả.
+ */
+pub fn cleanup_orphan_covers(app: &AppHandle, conn: &Connection) -> rusqlite::Result<usize> {
+    let used = collect_used_cover_filenames(conn)?;
+    if used.is_empty() {
+        return Ok(0);
+    }
+    Ok(remove_orphans_in_dir(&get_covers_dir(app), &used, SystemTime::now()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("flarity_test_{}_{}", name, std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn query_failure_is_error_not_empty_set() {
+        let conn = Connection::open_in_memory().unwrap();
+        assert!(collect_used_cover_filenames(&conn).is_err());
+    }
+
+    #[test]
+    fn removes_only_unused_old_covers() {
+        let dir = temp_dir("orphans");
+        fs::write(dir.join("used.jpg"), b"a").unwrap();
+        fs::write(dir.join("orphan.jpg"), b"b").unwrap();
+        let mut used = HashSet::new();
+        used.insert("used.jpg".to_string());
+        // Pretend it is an hour later so the grace period has passed.
+        let later = SystemTime::now() + Duration::from_secs(3600);
+        assert_eq!(remove_orphans_in_dir(&dir, &used, later), 1);
+        assert!(dir.join("used.jpg").exists());
+        assert!(!dir.join("orphan.jpg").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn collects_filenames_from_all_tables() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE saved_tracks (picture TEXT);
+             CREATE TABLE playlists (cover_art TEXT);
+             CREATE TABLE song_analytics_all (album_art TEXT);
+             CREATE TABLE daily_song_analytics (album_art TEXT);
+             CREATE TABLE play_history (album_art TEXT);
+             INSERT INTO saved_tracks VALUES ('/x/a.jpg');
+             INSERT INTO daily_song_analytics VALUES ('/x/d.png');
+             INSERT INTO play_history VALUES ('/x/p.webp');",
+        )
+        .unwrap();
+        let used = collect_used_cover_filenames(&conn).unwrap();
+        assert!(used.contains("a.jpg") && used.contains("d.png") && used.contains("p.webp"));
+    }
+}
