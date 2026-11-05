@@ -11,7 +11,8 @@ const rootDir = path.resolve(__dirname, '..');
 // 1. Đọc metadata từ tauri.conf.json và package.json
 const tauriConfigPath = path.join(rootDir, 'src-tauri', 'tauri.conf.json');
 const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8'));
-const version = tauriConfig.version || '1.1.2';
+// Nguồn phiên bản duy nhất: package.json (build kiểm tra khớp với Cargo.toml)
+const version = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8')).version;
 const productName = tauriConfig.productName || 'Flarity Music';
 
 console.log(`\n======================================================`);
@@ -113,8 +114,13 @@ if (fs.existsSync(zipFilePath)) {
 
 console.log(`🗜️ Đang nén thư mục portable thành file: ${zipFileName}...`);
 try {
-  const psScript = `Compress-Archive -Path '${portableFolder}\\*' -DestinationPath '${zipFilePath}' -Force`;
-  execSync(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
+  if (process.platform === 'win32') {
+    const psScript = `Compress-Archive -Path '${portableFolder}\\*' -DestinationPath '${zipFilePath}' -Force`;
+    execSync(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
+  } else {
+    // Linux/macOS: không có PowerShell, dùng zip
+    execSync(`zip -r -q "${zipFilePath}" .`, { cwd: portableFolder, stdio: 'inherit' });
+  }
   console.log(`✅ Nén ZIP thành công! Kích thước: ${(fs.statSync(zipFilePath).size / (1024 * 1024)).toFixed(2)} MB`);
 } catch (err) {
   console.error(`❌ Lỗi khi nén file zip:`, err.message);
