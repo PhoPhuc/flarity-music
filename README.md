@@ -1,162 +1,191 @@
 <div align="center">
 
-# Flarity Music
+<img src="docs/assets/banner.svg" alt="Flarity Music: a local-first desktop music player" width="100%">
 
-**Desktop music player built for sound quality, speed, and offline freedom.**
+**Your local music library, played natively on your desktop. Lyrics translated into any language.**
 
-[![Release](https://img.shields.io/badge/Release-v1.1.7-FA243C?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.7)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-06B6D4?style=for-the-badge)](https://github.com/PhoPhuc/flarity-music/releases)
-[![Rust](https://img.shields.io/badge/Backend-Rust%20Tauri%20v2-orange?style=for-the-badge&logo=rust)](https://tauri.app)
-[![React](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%208-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/PhoPhuc/flarity-music?style=flat-square&color=FA243C)](https://github.com/PhoPhuc/flarity-music/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/PhoPhuc/flarity-music/total?style=flat-square&color=FA243C)](https://github.com/PhoPhuc/flarity-music/releases)
+[![Stars](https://img.shields.io/github/stars/PhoPhuc/flarity-music?style=flat-square&color=FA243C)](https://github.com/PhoPhuc/flarity-music/stargazers)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![Rust](https://img.shields.io/badge/Rust-stable-DEA584?style=flat-square&logo=rust&logoColor=black)](https://www.rust-lang.org)
 
-[**Download**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.7) · [**Features**](#features) · [**Benchmarks**](#benchmarks) · [**Build from Source**](#build-from-source)
+[**Download**](https://github.com/PhoPhuc/flarity-music/releases/latest) ·
+[**Features**](#features) ·
+[**Quick start**](#quick-start) ·
+[**Privacy**](#privacy) ·
+[**Contributing**](#contributing)
 
 </div>
 
 ---
 
-## About
+## Why Flarity
 
-Flarity Music is a desktop music player that plays local audio files with Hi-Res lossless support, translates lyrics using multiple AI providers, and keeps resource usage low.
-
-It's built with **Rust (Tauri v2)** on the backend and **React 19** on the frontend. No Electron. The result is a ~6 MB installer that uses around **400 MB RAM** and starts in under half a second.
-
-No ads. No accounts. No telemetry. Your music stays on your machine.
+- **Your files, your library.** Flarity plays the music you already own. There are no accounts, no ads, and no analytics SDK. Listening stats live in a local SQLite database on your machine.
+- **Native, not Electron.** The shell is written in Rust with Tauri v2 and uses the WebView already on your system, so the app stays small and starts quickly.
+- **Lyrics in your language.** Translate synced lyrics with free Google Translate, or bring your own key for Gemini, Claude, OpenAI, OpenRouter, or any OpenAI-compatible endpoint such as Ollama or LM Studio.
 
 ---
 
 ## Features
 
-### AI Lyrics Translation
+### Library and playback
 
-Translate lyrics in real time using the AI provider of your choice:
+- Scan a music folder for **MP3, FLAC, WAV, M4A, AAC and OGG** files.
+- Synced **`.lrc` lyrics** are picked up automatically when they share a filename with the track, and so are matching music videos.
+- Lyrics lookup through [LRCLIB](https://lrclib.net), with lyric search and batch lyric tools.
+- Full-screen lyric mode, a queue, and global keyboard shortcuts.
+- Edit track metadata in-app.
+- Smart recommendations based on what you listen to.
 
-| Provider | Models |
-|---|---|
-| Google Translate | Free, no API key needed |
-| Google Gemini | gemini-3.5-flash-lite (default), gemini-3.7-flash, gemini-2.0-flash, and more |
-| Anthropic Claude | claude-3-7-sonnet, claude-3-5-sonnet, claude-3-5-haiku |
-| OpenAI | gpt-4o, gpt-4o-mini, o3-mini |
-| OpenRouter | Access to Claude, Gemini, DeepSeek, Llama, and others |
-| Custom Endpoint | Any OpenAI-compatible API (Ollama, LM Studio, etc.) |
+### AI lyrics translation
 
-Translations appear as subtitle text below each lyric line. You can pick from 4 display styles (Apple Music, Spotify, Cinema, Neon Glow) and adjust the size and color.
+Translation runs on the provider you choose. Requests go straight from the app to that provider.
 
-Manual translation is the default. Auto-translate on open can be enabled in Settings.
+| Provider | Key required | Notes |
+|---|:---:|---|
+| Google Translate | No | Free, works out of the box |
+| Google Gemini | Yes | Default model: `gemini-3.5-flash-lite` |
+| Anthropic Claude | Yes | Claude models |
+| OpenAI | Yes | GPT-4o family |
+| OpenRouter | Yes | One key for many models |
+| Custom endpoint | Optional | Any OpenAI-compatible API, including Ollama and LM Studio |
 
-### Audio Engine
+Translations appear as a subtitle under each lyric line in one of four styles: **Apple Music**, **Spotify**, **Cinema**, or **Neon**. Translation is manual by default. Turn on auto-translate in Settings if you prefer it on open.
 
-- **Formats**: FLAC (up to 24-bit/192kHz), ALAC, WAV, DSD, MP3, AAC, OGG, OPUS, M4A
-- **10-band equalizer** with presets (Vocal Boost, Bass Heavy, Acoustic, Electronic, Rock, R&B, Flat)
-- **Spatial audio**: Bass booster, reverb, stereo widener
-- **Loudness normalization** (EBU R128) — no more volume jumps between tracks
-- **Gapless playback** and configurable crossfade
+### Visuals
 
-### Visual Design
+- Six background styles that move with the music: Fluid Mesh, Starfield, Aurora, Vinyl, Spectrum, and an OLED Black mode.
+- A music video player with Picture-in-Picture support.
 
-- Dark glassmorphism UI
-- 4 live background visualizers: Fluid Canvas, Waveform, Particle Cloud, Glass Blur — each reacts to audio in real time
-- Full-screen lyric mode with auto-hiding cursor
+### YouTube (optional)
 
-### Downloads & YouTube
+- Search and stream YouTube Music tracks without an account.
+- Download tracks with tags and cover art. This needs [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) installed on your system. [`ffmpeg`](https://ffmpeg.org) is optional.
 
-- Stream and browse tracks from YouTube Music without an account
-- Download tracks with automatic metadata tagging and cover art
-- 1080p music video player with Picture-in-Picture support
+### Stats and sharing
 
-### Charts & Statistics
-
-- Listening stats with top tracks and top artists ranked by play time
-- Export chart snapshots as shareable images (OLED-black poster with album art and artist avatars)
+- Top tracks and top artists ranked by listening time.
+- Export your charts as shareable images.
 
 ---
 
-## Benchmarks
+## Download
 
-Measured on the same Windows machine, playing the same track, after 5 minutes of idle playback.
+Grab the latest Windows build from the [**Releases page**](https://github.com/PhoPhuc/flarity-music/releases/latest):
 
-| | Flarity Music | Spotify Desktop | Apple Music (Windows) |
-|---|:---:|:---:|:---:|
-| **RAM usage** | ~400 MB | ~950 MB – 1.4 GB | ~800 MB – 1.2 GB |
-| **Startup time** | ~0.35s | ~2.8s | ~3.2s |
-| **Installer size** | ~6 MB | ~280 MB | ~180 MB |
-| **Max audio quality** | FLAC 24-bit/192kHz | OGG 320kbps | ALAC Lossless (paid) |
-| **Offline downloads** | DRM-free MP3/FLAC | DRM-encrypted cache | DRM-encrypted cache |
-| **Ads** | None | Yes (free tier) | No (subscription required) |
-| **Telemetry** | None | Yes | Yes |
-| **Price** | Free (MIT) | \$10.99 – \$16.99/mo | \$10.99/mo |
+- **Setup installer** (`-x64-setup.exe`), per-user install
+- **MSI installer** (`-x64.msi`)
+- **Portable ZIP** (`-portable-x64.zip`), extract and run
+
+macOS builds are not attached to releases yet. To run on macOS, [build from source](#quick-start).
 
 ---
 
-## Downloads
-
-Latest release: [**v1.1.7**](https://github.com/PhoPhuc/flarity-music/releases/tag/v1.1.7)
-
-### Windows (x64)
-| File | Description |
-|---|---|
-| [`Flarity-Music-1.1.7-x64-setup.exe`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.7/Flarity-Music-1.1.7-x64-setup.exe) | Installer (NSIS) |
-| [`Flarity-Music-1.1.7-portable-x64.zip`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.7/Flarity-Music-1.1.7-portable-x64.zip) | Portable ZIP — extract and run |
-| [`Flarity-Music-1.1.7-x64.msi`](https://github.com/PhoPhuc/flarity-music/releases/download/v1.1.7/Flarity-Music-1.1.7-x64.msi) | MSI installer |
-
-### macOS (Universal — Apple Silicon & Intel)
-Universal `.dmg` available via [GitHub Actions](https://github.com/PhoPhuc/flarity-music/actions) or build from source.
-
----
-
-## Build from Source
+## Quick start
 
 ### Requirements
-- Node.js 18+ and npm
-- Rust toolchain (cargo, rustc 1.80+)
 
-### Steps
+| | Windows | macOS |
+|---|---|---|
+| Node.js | 20.19+ or 22.12+ | 20.19+ or 22.12+ |
+| Rust | Stable, 1.77.2+ | Stable, 1.77.2+ |
+| Other | WebView2 (built into Windows 11) | Xcode Command Line Tools |
+| Optional | `yt-dlp`, `ffmpeg` | `yt-dlp`, `ffmpeg` |
+
+### Build from source
 
 ```bash
 git clone https://github.com/PhoPhuc/flarity-music.git
 cd flarity-music
 npm install
 
-# Development
-npm run dev
-
-# Production build (Windows)
-npm run dist
-# Output: release/
-
-# Production build (macOS Universal)
-npm run build:macos
+npm run dev           # run the desktop app in development mode
+npm run dist          # Windows: installer and portable build
+npm run build:macos   # macOS: universal build (Apple Silicon and Intel)
 ```
+
+On first launch, choose the folder that contains your music.
 
 ---
 
-## Project Structure
+## Privacy
+
+Flarity is local-first. Here is exactly what leaves your machine:
+
+- **Nothing to Flarity.** The app has no server of its own, no accounts, and no analytics.
+- **Listening history stays local.** Play counts and stats are stored in a SQLite database on your computer.
+- **Only when you use a feature:**
+  - Lyrics lookup: `lrclib.net`
+  - Translation: the provider you select (Google, Gemini, OpenAI, Anthropic, OpenRouter, or your custom endpoint)
+  - YouTube search and discovery: YouTube, noembed.com, and the iTunes Search API
+  - Update checks: the GitHub Releases API
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Desktop shell | Tauri v2 (Rust), system WebView |
+| Backend | Rust, SQLite (`rusqlite`), `yt-dlp` integration |
+| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4 |
+| State and data | TanStack Query and Virtual, React Context |
+| Icons | lucide-react |
+
+---
+
+## Project structure
 
 ```
 flarity-music/
-├── src/                        # React 19 + TypeScript frontend
-│   ├── components/             # UI components
-│   ├── context/                # Global state (PlayerContext)
-│   ├── services/               # AI translation, update checker
-│   ├── utils/                  # Audio DSP, LRC parser, Tauri bridge
-│   └── App.tsx
-├── src-tauri/                  # Rust backend (Tauri v2)
-│   ├── src/                    # IPC commands, file scanner
+├── src/                    # React 19 + TypeScript frontend
+│   ├── components/         # Player, library, lyrics, settings, analytics
+│   ├── context/            # PlayerContext: global playback state
+│   ├── hooks/              # Shortcuts, telemetry, updater, recommendations
+│   ├── services/           # Lyrics translation providers, update checks
+│   └── utils/              # Audio helpers, LRC parser, LRCLIB client, Tauri bridge
+├── src-tauri/              # Rust backend (Tauri v2)
+│   ├── src/                # Commands, database, covers, telemetry, security
 │   ├── tauri.conf.json
 │   └── Cargo.toml
-├── scripts/                    # Build & packaging scripts
-├── public/                     # Static assets
-└── package.json
+├── scripts/                # Build and packaging helpers
+├── docs/assets/            # README banner and social preview
+└── public/                 # Static assets and logo
 ```
 
 ---
 
-## Contributors
+## Contributing
 
-- **[PhoPhuc](https://github.com/PhoPhuc)** — Creator
-- **[Antigravity](https://deepmind.google/technologies/gemini/)** — AI Pair Programmer (Google DeepMind)
+Issues and pull requests are welcome.
+
+1. For larger changes, open an issue first so we can agree on the approach.
+2. Create a branch, make your change, and run `npm run build` (type check and production build) before you push.
+3. Open a pull request that describes what changed and why.
+
+Bug reports are most useful with your OS, the Flarity version number, and the steps to reproduce.
+
+---
+
+## Acknowledgements
+
+- [Tauri](https://tauri.app) for the native shell
+- [LRCLIB](https://lrclib.net) for open lyrics data
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) for YouTube downloads
+- **[Antigravity](https://deepmind.google/technologies/gemini/)** (Google DeepMind), AI pair programmer
+
+---
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+Flarity Music is released under the [MIT License](LICENSE).
+
+<div align="center">
+
+Made by **[PhoPhuc](https://github.com/PhoPhuc)**. If Flarity is useful to you, a star helps others find it.
+
+</div>
