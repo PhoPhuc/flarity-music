@@ -66,7 +66,7 @@ export const AudioQualityModal: React.FC<AudioQualityModalProps> = ({
   const standardList = Object.values(AUDIO_STANDARDS);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Chi tiết chất lượng âm thanh" className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
       {/* Backdrop */}
       <div
         onClick={onClose}
@@ -127,7 +127,7 @@ export const AudioQualityModal: React.FC<AudioQualityModalProps> = ({
           <button
             onClick={onClose}
             className="p-2 rounded-full bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white transition-all active:scale-95 border border-white/10"
-            title="Đóng (Esc)"
+            title="Đóng (Esc)" aria-label="Đóng (Esc)"
           >
             <X className="w-4 h-4" />
           </button>

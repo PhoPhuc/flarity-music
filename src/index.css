@@ -261,3 +261,21 @@ input[type="range"]:hover::-webkit-slider-thumb {
 }
 
 
+
+/* Vòng focus rõ ràng khi điều hướng bằng bàn phím (không hiện khi dùng chuột) */
+:focus-visible {
+  outline: 2px solid var(--color-apple-pink);
+  outline-offset: 2px;
+}
+
+/* Tôn trọng cài đặt "giảm chuyển động" của hệ điều hành */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

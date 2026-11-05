@@ -293,7 +293,7 @@ export const MvPlayerView: React.FC<{ onClose?: () => void }> = ({ onClose }) =>
         <button
           onClick={() => handleClose()}
           className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-95 border border-white/10 shadow-lg"
-          title="Thoát màn hình MV (Esc)"
+          title="Thoát màn hình MV (Esc)" aria-label="Thoát màn hình MV (Esc)"
         >
           <X className="w-5 h-5" />
         </button>
@@ -334,17 +334,17 @@ export const MvPlayerView: React.FC<{ onClose?: () => void }> = ({ onClose }) =>
         {/* Playback Controls & Action Buttons */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <button onClick={prevTrack} className="text-white hover:text-apple-pink transition-colors active:scale-95" title="Bài trước">
+            <button onClick={prevTrack} className="text-white hover:text-apple-pink transition-colors active:scale-95" title="Bài trước" aria-label="Bài trước">
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
             <button 
               onClick={togglePlayPause} 
               className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-all shadow-lg active:scale-95"
-              title={isPlaying ? "Tạm dừng" : "Phát"}
+              title={isPlaying ? "Tạm dừng" : "Phát"} aria-label={isPlaying ? "Tạm dừng" : "Phát"}
             >
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </button>
-            <button onClick={nextTrack} className="text-white hover:text-apple-pink transition-colors active:scale-95" title="Bài kế tiếp">
+            <button onClick={nextTrack} className="text-white hover:text-apple-pink transition-colors active:scale-95" title="Bài kế tiếp" aria-label="Bài kế tiếp">
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
           </div>
@@ -355,7 +355,7 @@ export const MvPlayerView: React.FC<{ onClose?: () => void }> = ({ onClose }) =>
               <button 
                 onClick={() => setShowLyrics(!showLyrics)}
                 className={`p-2 rounded-xl transition-all ${showLyrics ? 'bg-apple-pink text-white shadow-lg' : 'text-neutral-300 hover:text-white hover:bg-white/10'}`}
-                title="Hiện Lời Bài Hát"
+                title="Hiện Lời Bài Hát" aria-label="Hiện Lời Bài Hát"
               >
                 <Mic2 className="w-4 h-4" />
               </button>
@@ -365,7 +365,7 @@ export const MvPlayerView: React.FC<{ onClose?: () => void }> = ({ onClose }) =>
             <button 
               onClick={togglePictureInPicture}
               className="p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-white/10 transition-all"
-              title="Chế độ cửa sổ thu nhỏ (Picture-in-Picture)"
+              title="Chế độ cửa sổ thu nhỏ (Picture-in-Picture)" aria-label="Chế độ cửa sổ thu nhỏ (Picture-in-Picture)"
             >
               <PictureInPicture2 className="w-4 h-4" />
             </button>
@@ -402,7 +402,7 @@ export const MvPlayerView: React.FC<{ onClose?: () => void }> = ({ onClose }) =>
             <button 
               onClick={toggleFullscreen}
               className="p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-white/10 transition-all"
-              title="Toàn màn hình"
+              title="Toàn màn hình" aria-label="Toàn màn hình"
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>

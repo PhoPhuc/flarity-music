@@ -219,7 +219,7 @@ export const SmartVibeHub: React.FC = () => {
                           ? 'opacity-100 scale-100'
                           : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
                       }`}
-                      title={isThisPlaying ? "Tạm dừng" : "Phát bài hát"}
+                      title={isThisPlaying ? "Tạm dừng" : "Phát bài hát"} aria-label={isThisPlaying ? "Tạm dừng" : "Phát bài hát"}
                     >
                       {isThisPlaying ? (
                         <Pause className="w-4 h-4 fill-current" />

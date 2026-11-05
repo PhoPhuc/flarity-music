@@ -566,7 +566,7 @@ export const ChartExportModal: React.FC<ChartExportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Xuất bảng xếp hạng" className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
       {/* Backdrop */}
       <div
         onClick={onClose}

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { useDialog } from './ui/Dialog';
 import { usePlayer } from '../context/PlayerContext';
 import {
   Music2,
@@ -43,6 +44,7 @@ export const Sidebar: React.FC = () => {
 
   const [showNewPlaylistModal, setShowNewPlaylistModal] = useState(false);
   useEscapeKey(() => setShowNewPlaylistModal(false), showNewPlaylistModal);
+  const dialog = useDialog();
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [playlistMenu, setPlaylistMenu] = useState<PlaylistContextMenu | null>(null);
   const [renameState, setRenameState] = useState<{ id: string; name: string } | null>(null);
@@ -88,10 +90,14 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleDeletePlaylist = async (playlistId: string, playlistName: string) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa playlist "${playlistName}"?`)) {
-      await deletePlaylist(playlistId);
-    }
     setPlaylistMenu(null);
+    const ok = await dialog.confirm({
+      title: 'Xóa playlist?',
+      message: `Playlist "${playlistName}" sẽ bị xóa. Các bài hát vẫn còn trong thư viện.`,
+      confirmLabel: 'Xóa playlist',
+      danger: true,
+    });
+    if (ok) await deletePlaylist(playlistId);
   };
 
   return (
@@ -158,7 +164,7 @@ export const Sidebar: React.FC = () => {
             <button
               onClick={() => setShowNewPlaylistModal(true)}
               className="text-neutral-400 hover:text-apple-pink transition-colors"
-              title="Tạo Playlist mới"
+              title="Tạo Playlist mới" aria-label="Tạo Playlist mới"
             >
               <PlusCircle className="w-4 h-4" />
             </button>
@@ -180,8 +186,8 @@ export const Sidebar: React.FC = () => {
                         onKeyDown={e => e.key === 'Escape' && setRenameState(null)}
                         className="flex-1 bg-neutral-800 border border-apple-pink/50 rounded-lg px-2 py-1 text-xs text-white focus:outline-none min-w-0"
                       />
-                      <button type="submit" className="text-apple-pink hover:text-white p-1 shrink-0" title="Xác nhận"><Check className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => setRenameState(null)} className="text-neutral-500 hover:text-white p-1 shrink-0" title="Hủy"><X className="w-3.5 h-3.5" /></button>
+                      <button type="submit" className="text-apple-pink hover:text-white p-1 shrink-0" title="Xác nhận" aria-label="Xác nhận"><Check className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => setRenameState(null)} className="text-neutral-500 hover:text-white p-1 shrink-0" title="Hủy" aria-label="Hủy"><X className="w-3.5 h-3.5" /></button>
                     </form>
                   ) : (
                     <button
@@ -209,7 +215,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Modal Tạo Playlist Mới */}
       {showNewPlaylistModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" aria-label="Tạo playlist mới" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form
             onSubmit={handleCreatePlaylist}
             className="bg-neutral-800 border border-white/10 rounded-2xl p-5 w-80 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200"

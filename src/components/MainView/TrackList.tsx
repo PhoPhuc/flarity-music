@@ -15,6 +15,8 @@ interface TrackListProps {
   onContextMenu?: (e: React.MouseEvent, track: Track) => void;
   onFetchNextPage?: () => void;
   hasNextPage?: boolean;
+  /** Gợi ý hiển thị khi danh sách trống (tùy ngữ cảnh: playlist, nghệ sĩ...). */
+  emptyMessage?: string;
 }
 
 export const TrackList: React.FC<TrackListProps> = React.memo(({
@@ -25,6 +27,7 @@ export const TrackList: React.FC<TrackListProps> = React.memo(({
   onContextMenu,
   onFetchNextPage,
   hasNextPage,
+  emptyMessage = 'Chưa có bài hát nào ở đây.',
 }) => {
   const { currentTrack, isPlaying, playTrack, setLyricsOpen, attachMvToTrack, attachLrcToTrack } = usePlayer();
   const [contextMenuTrack, setContextMenuTrack] = useState<{ trackId: string; x: number; y: number } | null>(null);
@@ -73,7 +76,7 @@ export const TrackList: React.FC<TrackListProps> = React.memo(({
     return (
       <div className="h-64 flex flex-col items-center justify-center text-neutral-500 space-y-2">
         <Music className="w-12 h-12 opacity-30" />
-        <p className="text-sm font-medium">Danh sách bài hát trống.</p>
+        <p className="text-sm font-medium text-center px-6">{emptyMessage}</p>
       </div>
     );
   }
@@ -105,7 +108,7 @@ export const TrackList: React.FC<TrackListProps> = React.memo(({
             <button
               onClick={() => setSearchQuery('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 rounded-md hover:bg-white/10 transition-colors"
-              title="Xóa tìm kiếm"
+              title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -248,12 +251,33 @@ const TrackRow: React.FC<TrackRowProps> = React.memo(({
     e.dataTransfer.effectAllowed = 'move';
   };
 
+  // Bàn phím: Enter phát bài; phím Menu / Shift+F10 mở menu ngữ cảnh ngay tại hàng
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return; // phím của các nút bên trong giữ nguyên
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      playTrack(track, tracks);
+    } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+      e.preventDefault();
+      const rect = e.currentTarget.getBoundingClientRect();
+      onContextMenu(
+        { preventDefault: () => undefined, clientX: rect.left + 48, clientY: rect.bottom - 8 } as unknown as React.MouseEvent,
+        track
+      );
+    }
+  };
+
   return (
     <div
       draggable
       onDragStart={handleDragStart}
       onClick={() => playTrack(track, tracks)}
       onContextMenu={e => onContextMenu(e, track)}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="group"
+      aria-label={`${track.title} – ${track.artist}. Nhấn Enter để phát`}
+      aria-current={isCurrent ? 'true' : undefined}
       className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 hover:bg-white/5 ${
         isCurrent ? 'bg-apple-pink/10' : ''
       }`}
@@ -267,7 +291,7 @@ const TrackRow: React.FC<TrackRowProps> = React.memo(({
             index + 1
           )}
         </span>
-        <button className="w-6 hidden group-hover:flex items-center justify-center text-white">
+        <button type="button" tabIndex={-1} aria-hidden="true" className="w-6 hidden group-hover:flex items-center justify-center text-white">
           <Play className="w-4 h-4 fill-current" />
         </button>
 
@@ -322,6 +346,15 @@ const TrackRow: React.FC<TrackRowProps> = React.memo(({
                 setViewMode('artist-detail');
               }
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && track.artist) {
+                e.stopPropagation();
+                setSelectedArtist(track.artist);
+                setViewMode('artist-detail');
+              }
+            }}
+            role="link"
+            tabIndex={0}
             className="text-xs text-neutral-400 truncate hover:text-apple-pink hover:underline cursor-pointer transition-colors w-fit"
             title={`Xem nghệ sĩ ${track.artist}`}
           >
@@ -333,30 +366,34 @@ const TrackRow: React.FC<TrackRowProps> = React.memo(({
       {/* Extras & Duration */}
       <div className="flex items-center gap-3 shrink-0">
         {track.hasMv && onOpenMvForTrack && (
-          <span
+          <button
+            type="button"
             onClick={e => {
               e.stopPropagation();
               playTrack(track, tracks);
               onOpenMvForTrack(track);
             }}
-            className="p-1 rounded text-neutral-400 hover:text-apple-pink hover:bg-white/10 transition-colors"
+            className="p-1 rounded text-neutral-400 hover:text-apple-pink hover:bg-white/10 transition-colors cursor-pointer"
             title="Phát Music Video (MV)"
+            aria-label="Phát Music Video (MV)"
           >
             <Tv className="w-3.5 h-3.5 text-apple-pink" />
-          </span>
+          </button>
         )}
         {track.hasLyric && (
-          <span
+          <button
+            type="button"
             onClick={e => {
               e.stopPropagation();
               playTrack(track, tracks);
               setLyricsOpen(true);
             }}
-            className="p-1 rounded text-neutral-400 hover:text-apple-pink hover:bg-white/10 transition-colors"
+            className="p-1 rounded text-neutral-400 hover:text-apple-pink hover:bg-white/10 transition-colors cursor-pointer"
             title="Có lời bài hát"
+            aria-label="Phát và xem lời bài hát"
           >
             <Mic2 className="w-3.5 h-3.5" />
-          </span>
+          </button>
         )}
         <span className="text-xs text-neutral-400 font-medium tabular-nums w-12 text-right">
           {formatTime(track.duration)}

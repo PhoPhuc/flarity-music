@@ -96,7 +96,7 @@ export const NavigationHeader: React.FC = () => {
         <button
           onClick={goBack}
           disabled={!canGoBack}
-          title="Quay lại trang trước (Alt + ← hoặc Backspace)"
+          title="Quay lại trang trước (Alt + ← hoặc Backspace)" aria-label="Quay lại trang trước (Alt + ← hoặc Backspace)"
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all border ${
             canGoBack
               ? 'bg-white/10 hover:bg-white/20 text-white border-white/10 active:scale-90 cursor-pointer shadow-sm'
@@ -110,7 +110,7 @@ export const NavigationHeader: React.FC = () => {
         <button
           onClick={goForward}
           disabled={!canGoForward}
-          title="Tiến tới trang sau (Alt + →)"
+          title="Tiến tới trang sau (Alt + →)" aria-label="Tiến tới trang sau (Alt + →)"
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all border ${
             canGoForward
               ? 'bg-white/10 hover:bg-white/20 text-white border-white/10 active:scale-90 cursor-pointer shadow-sm'
@@ -124,7 +124,7 @@ export const NavigationHeader: React.FC = () => {
         <button
           onClick={() => refreshLibrary()}
           disabled={isReloading}
-          title="Tải lại & làm mới thư viện nhạc (F5 / Ctrl + R)"
+          title="Tải lại & làm mới thư viện nhạc (F5 / Ctrl + R)" aria-label="Tải lại & làm mới thư viện nhạc (F5 / Ctrl + R)"
           className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white border border-white/10 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-sm ml-1"
         >
           <RotateCw

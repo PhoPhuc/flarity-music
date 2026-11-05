@@ -329,7 +329,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Cài đặt và cấu hình hệ thống" className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
       {/* Backdrop */}
       <div onClick={onClose} className="absolute inset-0 bg-black/80 backdrop-blur-apple transition-opacity" />
 
@@ -357,7 +357,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <button
             onClick={onClose}
             className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all cursor-pointer"
-            title="Đóng cửa sổ (Esc)"
+            title="Đóng cửa sổ (Esc)" aria-label="Đóng cửa sổ (Esc)"
           >
             <X className="w-4 h-4" />
           </button>
@@ -848,7 +848,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <button
                         onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
                         className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white border border-white/10 transition-all cursor-pointer"
-                        title={sortDirection === 'desc' ? 'Đang xếp từ lớn nhất xuống' : 'Đang xếp từ nhỏ nhất lên'}
+                        title={sortDirection === 'desc' ? 'Đang xếp từ lớn nhất xuống' : 'Đang xếp từ nhỏ nhất lên'} aria-label={sortDirection === 'desc' ? 'Đang xếp từ lớn nhất xuống' : 'Đang xếp từ nhỏ nhất lên'}
                       >
                         <ArrowUpDown className="w-3.5 h-3.5" />
                       </button>

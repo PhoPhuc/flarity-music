@@ -350,7 +350,7 @@ export const LyricsTranslationPopover: React.FC<LyricsTranslationPopoverProps> =
                     settings.color === c.color ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: c.color }}
-                  title={c.name}
+                  title={c.name} aria-label={c.name}
                 />
               ))}
             </div>
@@ -396,7 +396,7 @@ export const LyricsTranslationPopover: React.FC<LyricsTranslationPopoverProps> =
               onClick={handleClearCurrentTranslation}
               disabled={isTranslating}
               className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-rose-400 border border-white/10 transition-colors cursor-pointer"
-              title="Xóa bản dịch đã lưu của bài này"
+              title="Xóa bản dịch đã lưu của bài này" aria-label="Xóa bản dịch đã lưu của bài này"
             >
               <Trash2 className="w-4 h-4" />
             </button>

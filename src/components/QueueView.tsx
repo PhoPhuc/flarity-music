@@ -106,7 +106,7 @@ export const QueueView: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
           <button
             onClick={onClose}
             className="text-neutral-400 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors ml-1 cursor-pointer"
-            title="Đóng danh sách chờ"
+            title="Đóng danh sách chờ" aria-label="Đóng danh sách chờ"
           >
             <X className="w-4 h-4" />
           </button>
@@ -208,7 +208,7 @@ export const QueueView: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                         removeFromQueue(idx);
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
-                      title="Xóa khỏi danh sách chờ"
+                      title="Xóa khỏi danh sách chờ" aria-label="Xóa khỏi danh sách chờ"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

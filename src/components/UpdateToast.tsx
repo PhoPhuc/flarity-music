@@ -55,7 +55,7 @@ export const UpdateToast: React.FC<UpdateToastProps> = ({
                 type="button"
                 onClick={onClose}
                 className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                title="Đóng thông báo"
+                title="Đóng thông báo" aria-label="Đóng thông báo"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

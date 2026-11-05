@@ -3,6 +3,7 @@ import type { Album } from '../../types';
 import { Music, Play, Layers, Sparkles, RefreshCw, Search, X } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { convertFileSrc } from '../../utils/tauriBridge';
+import { useDialog } from '../ui/Dialog';
 
 interface AlbumGridProps {
   albums: Album[];
@@ -12,6 +13,7 @@ interface AlbumGridProps {
 
 export const AlbumGrid: React.FC<AlbumGridProps> = React.memo(({ albums, onSelectAlbum, onContextMenu }) => {
   const { playTrack, mergeAlbum, updateTrackMetadata } = usePlayer();
+  const dialog = useDialog();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredAlbums = useMemo(() => {
@@ -33,9 +35,12 @@ export const AlbumGrid: React.FC<AlbumGridProps> = React.memo(({ albums, onSelec
       if (data.type === 'album') {
         const sourceAlbum = albums.find(a => a.id === data.albumId);
         if (sourceAlbum && sourceAlbum.id !== targetAlbum.id) {
-          if (confirm(`Bạn có muốn di chuyển toàn bộ bài hát từ Album "${sourceAlbum.name}" sang Album "${targetAlbum.name}"?`)) {
-            await mergeAlbum(sourceAlbum, targetAlbum);
-          }
+          const ok = await dialog.confirm({
+            title: 'Gộp album?',
+            message: `Toàn bộ bài hát của album "${sourceAlbum.name}" sẽ được chuyển sang album "${targetAlbum.name}".`,
+            confirmLabel: 'Gộp album',
+          });
+          if (ok) await mergeAlbum(sourceAlbum, targetAlbum);
         }
       } else if (data.type === 'track') {
         if (data.trackId) {
@@ -48,7 +53,7 @@ export const AlbumGrid: React.FC<AlbumGridProps> = React.memo(({ albums, onSelec
     } catch (e) {
       console.error('Lỗi khi drop vào album:', e);
     }
-  }, [albums, mergeAlbum, updateTrackMetadata]);
+  }, [albums, mergeAlbum, updateTrackMetadata, dialog]);
 
   if (albums.length === 0) {
     return (
@@ -80,7 +85,7 @@ export const AlbumGrid: React.FC<AlbumGridProps> = React.memo(({ albums, onSelec
             <button
               onClick={() => setSearchQuery('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-0.5 rounded-md hover:bg-white/10 transition-colors"
-              title="Xóa tìm kiếm"
+              title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -203,7 +208,7 @@ const AlbumCard: React.FC<AlbumCardProps> = React.memo(({ album, onSelectAlbum, 
         <button
           onClick={e => onPlayClick(e, album)}
           className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-apple-pink text-white flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 active:scale-95"
-          title="Phát Album"
+          title="Phát Album" aria-label="Phát Album"
         >
           <Play className="w-5 h-5 fill-current ml-0.5" />
         </button>

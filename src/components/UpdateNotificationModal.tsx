@@ -74,7 +74,7 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Có bản cập nhật mới" className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-200">
       {/* Backdrop */}
       <div onClick={onClose} className="absolute inset-0 bg-black/85 backdrop-blur-apple transition-opacity" />
 
@@ -114,7 +114,7 @@ export const UpdateNotificationModal: React.FC<UpdateNotificationModalProps> = (
           <button
             onClick={onClose}
             className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all cursor-pointer"
-            title="Đóng"
+            title="Đóng" aria-label="Đóng"
           >
             <X className="w-4 h-4" />
           </button>

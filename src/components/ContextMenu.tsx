@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { useDialog } from './ui/Dialog';
 import {
   Play,
   ListPlus,
@@ -34,6 +35,7 @@ interface ContextMenuProps {
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({ target, onClose, onOpenEditModal }) => {
   useEscapeKey(onClose, Boolean(target));
+  const dialog = useDialog();
   const menuRef = useRef<HTMLDivElement>(null);
   const [showPlaylistSubmenu, setShowPlaylistSubmenu] = useState(false);
   const [showAlbumPlaylistSubmenu, setShowAlbumPlaylistSubmenu] = useState(false);
@@ -112,10 +114,60 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ target, onClose, onOpe
 
   const handleCreatePlaylistFromTrack = async () => {
     if (!track) return;
-    const name = prompt('Tên playlist mới:', track.title);
-    if (!name?.trim()) return;
-    await createPlaylist(name.trim());
     onClose();
+    const name = await dialog.prompt({
+      title: 'Tạo playlist mới',
+      message: `Bài "${track.title}" sẽ được thêm vào playlist này.`,
+      defaultValue: track.title,
+      placeholder: 'Tên playlist',
+      confirmLabel: 'Tạo & thêm bài',
+    });
+    if (!name) return;
+    const created = await createPlaylist(name);
+    if (created) await addTrackToPlaylist(created.id, track.id);
+  };
+
+  const confirmDeleteTrack = async (permanent: boolean) => {
+    if (!track) return;
+    onClose();
+    const ok = await dialog.confirm(
+      permanent
+        ? {
+            title: 'Xóa vĩnh viễn bài hát?',
+            message: `"${track.title}" sẽ bị xóa khỏi ổ đĩa và không thể khôi phục.`,
+            confirmLabel: 'Xóa vĩnh viễn',
+            danger: true,
+          }
+        : {
+            title: 'Xóa bài hát khỏi thư viện?',
+            message: `"${track.title}" sẽ bị gỡ khỏi thư viện và file được chuyển vào Thùng rác.`,
+            confirmLabel: 'Chuyển vào Thùng rác',
+            danger: true,
+          }
+    );
+    if (ok) await deleteTrack(track.id, track.filePath, permanent);
+  };
+
+  const confirmDeleteAlbum = async (permanent: boolean) => {
+    if (!album) return;
+    onClose();
+    const count = album.tracks.length;
+    const ok = await dialog.confirm(
+      permanent
+        ? {
+            title: 'Xóa vĩnh viễn album?',
+            message: `${count} bài hát trong album "${album.name}" sẽ bị xóa khỏi ổ đĩa và không thể khôi phục.`,
+            confirmLabel: 'Xóa vĩnh viễn',
+            danger: true,
+          }
+        : {
+            title: 'Xóa album khỏi thư viện?',
+            message: `${count} bài hát trong album "${album.name}" sẽ bị gỡ khỏi thư viện và các file được chuyển vào Thùng rác.`,
+            confirmLabel: 'Chuyển vào Thùng rác',
+            danger: true,
+          }
+    );
+    if (ok) await deleteAlbum(album, permanent);
   };
 
   return (
@@ -247,25 +299,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ target, onClose, onOpe
             <div className="h-[1px] bg-white/5 my-1" />
 
             <button
-              onClick={() => {
-                if (confirm(`Bạn có chắc chắn muốn xóa bài hát "${track.title}" khỏi thư viện?`)) {
-                  deleteTrack(track.id, track.filePath, false);
-                }
-                onClose();
-              }}
+              onClick={() => void confirmDeleteTrack(false)}
               className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-amber-500/20 text-amber-400 transition-colors text-xs"
             >
               <Trash2 className="w-4 h-4" />
-              <span>Xóa Khỏi Thư Viện</span>
+              <span>Xóa Khỏi Thư Viện (vào Thùng rác)</span>
             </button>
 
             <button
-              onClick={() => {
-                if (confirm(`CẢNH BÁO: Bài hát "${track.title}" và file trên ổ đĩa sẽ bị XÓA VĨNH VIỄN!\n\nBạn có muốn tiếp tục?`)) {
-                  deleteTrack(track.id, track.filePath, true);
-                }
-                onClose();
-              }}
+              onClick={() => void confirmDeleteTrack(true)}
               className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors text-xs font-semibold"
             >
               <Trash2 className="w-4 h-4" />
@@ -374,25 +416,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ target, onClose, onOpe
             <div className="h-[1px] bg-white/5 my-1" />
 
             <button
-              onClick={() => {
-                if (confirm(`Bạn có chắc chắn muốn xóa Album "${album.name}" (${album.tracks.length} bài hát) khỏi thư viện?`)) {
-                  deleteAlbum(album, false);
-                }
-                onClose();
-              }}
+              onClick={() => void confirmDeleteAlbum(false)}
               className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-amber-500/20 text-amber-400 transition-colors text-xs"
             >
               <Trash2 className="w-4 h-4" />
-              <span>Xóa Album Khỏi Thư Viện</span>
+              <span>Xóa Album Khỏi Thư Viện (vào Thùng rác)</span>
             </button>
 
             <button
-              onClick={() => {
-                if (confirm(`CẢNH BÁO: Tất cả ${album.tracks.length} bài hát trong Album "${album.name}" sẽ bị XÓA VĨNH VIỄN trên đĩa cứng!\n\nBạn có muốn tiếp tục?`)) {
-                  deleteAlbum(album, true);
-                }
-                onClose();
-              }}
+              onClick={() => void confirmDeleteAlbum(true)}
               className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors text-xs font-semibold"
             >
               <Trash2 className="w-4 h-4" />

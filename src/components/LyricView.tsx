@@ -320,7 +320,7 @@ export const LyricView: React.FC<LyricViewProps> = ({ colors, compact = false })
                     key={b.id}
                     onClick={() => openAudioQualityModal(currentTrack, b.id)}
                     className={`px-2.5 py-1 rounded-xl border font-black text-[11px] uppercase tracking-wider shadow-md flex items-center gap-1.5 cursor-pointer hover:scale-105 hover:brightness-125 active:scale-95 transition-all ${b.style}`}
-                    title={`Nhấn để xem chi tiết chuẩn âm thanh ${b.label}`}
+                    title={`Nhấn để xem chi tiết chuẩn âm thanh ${b.label}`} aria-label={`Nhấn để xem chi tiết chuẩn âm thanh ${b.label}`}
                   >
                     {b.isDolby ? <Sparkles className="w-3.5 h-3.5 text-purple-300 animate-pulse" /> : <Disc className="w-3.5 h-3.5" />}
                     <span>{b.label}</span>
